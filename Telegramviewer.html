@@ -179,7 +179,7 @@
             background-position: center;
             background-repeat: no-repeat;
             transition: background-color 0.3s ease;
-            background-image: url('https://i.pinimg.com/originals/59/21/62/592162726a4cf64a5e06f749ceb6f1e9.jpg') / רקע ברירת מחדל בסגנון וואטסאפ לייט מוד */
+            background-image: url('https://i.pinimg.com/originals/59/21/62/592162726a4cf64a5e06f749ceb6f1e9.jpg')
         }
 
         .chat-body.has-background::before {
@@ -244,7 +244,11 @@
 }
 
 .message.out {
-    justify-content: flex-end;
+    justify-content: flex-start; /* היה ימין, עכשיו שמאל */
+}
+
+.message.in {
+    justify-content: flex-end; /* היה שמאל, עכשיו ימין */
 }
 
 .message-bubble {
@@ -260,15 +264,15 @@
 }
 
 .out .message-bubble {
-    background-color: var(--message-in-bg);
-    margin-left: 50px;
-    border-top-left-radius: 2px; /* פינה ימנית עליונה פחות עגולה */
+    background-color: var(--message-out-bg);
+    margin-right: 50px;
+    border-top-right-radius: 2px; /* פינה ימנית עליונה פחות עגולה */
 }
 
 .in .message-bubble {
-    background-color: var(--message-out-bg);
-    margin-right: 50px;
-    border-top-right-radius: 2px; /* פינה שמאלית עליונה פחות עגולה */
+    background-color: var(--message-in-bg);
+    margin-left: 50px;
+    border-top-left-radius: 2px; /* פינה שמאלית עליונה פחות עגולה */
 }
 
 .sender {
