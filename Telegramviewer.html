@@ -1,0 +1,3689 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Chat Viewer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* ======= סגנונות בסיסיים ======= */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f2f2f2;
+            direction: rtl;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ======= סרגל כלים ======= */
+        .toolbar {
+            background-color: #5682a3;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            z-index: 100;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .toolbar button {
+            background-color: #6e9cc6;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .toolbar button:hover {
+            background-color: #4e7ca3;
+        }
+
+        .toolbar input[type="file"] {
+            display: none;
+        }
+
+        /* ======= מיכל השיחה ======= */
+        .container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        #chat-container {
+            width: 100%;
+            max-width: 650px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* ======= כותרת השיחה ======= */
+        .chat-header {
+            background-color: #5682a3;
+            color: white;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .avatar {
+            width: 45px;
+            height: 45px;
+            background-color: #6e9cc6;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 15px;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+            overflow: hidden;
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .chat-info h2 {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .chat-info p {
+            font-size: 13px;
+            opacity: 0.8;
+        }
+
+        /* ======= גוף השיחה ======= */
+        .chat-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background-color: #e6ebee;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        /* רקע שקוף לגוף השיחה כאשר יש תמונת רקע */
+        .chat-body.has-background::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(230, 235, 238, 0.85);
+            z-index: 0;
+        }
+
+        /* ======= אין הודעות ======= */
+        .no-chat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #555;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .no-chat i {
+            font-size: 60px;
+            color: #5682a3;
+            margin-bottom: 20px;
+        }
+
+        .no-chat p {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        /* ======= כותרת תאריך ======= */
+        .date-header {
+            text-align: center;
+            margin: 15px 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .date-header span {
+            background-color: rgba(225, 245, 254, 0.92);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #505050;
+            box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
+        }
+
+        /* ======= הודעות ======= */
+        .message {
+            display: flex;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .message.out {
+            justify-content: flex-end;
+        }
+
+        .message-bubble {
+            max-width: 65%;
+            padding: 8px 10px;
+            border-radius: 8px;
+            position: relative;
+            word-wrap: break-word;
+            line-height: 1.4;
+            font-size: 14px;
+            box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
+        }
+
+        .out .message-bubble {
+            background-color: #eeffde;
+            margin-left: 50px;
+        }
+
+        .in .message-bubble {
+            background-color: white;
+            margin-right: 50px;
+        }
+
+        .sender {
+            font-size: 12.5px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .message-content {
+            margin-bottom: 4px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: rgba(0, 0, 0, 0.45);
+            text-align: left;
+            float: right;
+            margin-top: 2px;
+        }
+
+        /* ======= קבצים מצורפים ======= */
+        .attachment {
+            margin-bottom: 5px;
+        }
+
+        .attachment img, .sticker img {
+            max-width: 100%;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .attachment-image {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .attachment-image:hover {
+            transform: scale(1.02);
+        }
+
+        .sticker {
+            margin-bottom: 5px;
+        }
+
+        .sticker img {
+            max-width: 150px;
+            max-height: 150px;
+            cursor: pointer;
+        }
+
+        .attachment-file {
+            display: flex;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 5px;
+        }
+
+        .attachment-file i {
+            font-size: 24px;
+            margin-left: 10px;
+            color: #8696a0;
+        }
+
+        .attachment-file span {
+            font-size: 13px;
+        }
+
+        .audio-attachment {
+            margin-bottom: 5px;
+        }
+
+        .audio-attachment audio {
+            width: 100%;
+            height: 36px;
+        }
+
+        /* ======= מודל תמונה ======= */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+        }
+
+        /* ======= תוצרת טעינה והתקדמות ======= */
+        .loader {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+        }
+
+        .loader i {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        /* ======= הודעת סטטוס ======= */
+        #status {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 14px;
+            z-index: 3000;
+            display: none;
+        }
+
+        #status.success {
+            background-color: #28a745;
+        }
+
+        #status.error {
+            background-color: #dc3545;
+        }
+
+        /* הבטחת הופעת תוכן השיחה מעל הרקע */
+        #messages-container {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ======= הגדרות חדשות עבור התפריט של תמונת פרופיל ורקע ======= */
+        .settings-panel {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .settings-title {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .settings-close {
+            font-size: 24px;
+            cursor: pointer;
+            color: #555;
+        }
+
+        .settings-section {
+            margin-bottom: 15px;
+        }
+
+        .settings-section h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #5682a3;
+        }
+
+        .settings-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .settings-preview {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .profile-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: #6e9cc6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 36px;
+            overflow: hidden;
+        }
+
+        .profile-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .background-preview {
+            width: 200px;
+            height: 150px;
+            border-radius: 8px;
+            border: 2px dashed #ddd;
+            background-color: #f9f9f9;
+            background-size: cover;
+            background-position: center;
+            margin-top: 10px;
+        }
+
+        .file-input-wrapper {
+            margin-top: 10px;
+        }
+
+        .custom-file-input {
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-block;
+            font-size: 14px;
+        }
+
+        .custom-file-input:hover {
+            background-color: #e5e5e5;
+        }
+
+        /* סגנון לכפתור הסרת התמונה */
+        .remove-image-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            margin-right: 10px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .remove-image-btn:hover {
+            background-color: #c82333;
+        }
+
+        /* ======= סגנונות חדשים לויזואליזציית הערות של הודעות ======= */
+        .message-note {
+            font-size: 11px;
+            font-style: italic;
+            color: #777;
+            margin-top: 2px;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+        }
+
+        .message-note i {
+            margin-left: 4px;
+            font-size: 10px;
+        }
+
+        .message-edited {
+            color: #007bff;
+        }
+
+        .message-deleted {
+            color: #dc3545;
+        }
+
+        .message-forwarded {
+            color: #6c757d;
+        }
+
+        /* ======= סגנונות חדשים לניהול משתתפים ======= */
+        .participants-section {
+            margin-bottom: 20px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .participant-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .participant-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #6e9cc6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-left: 10px;
+            overflow: hidden;
+        }
+
+        .participant-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .participant-info {
+            flex: 1;
+        }
+
+        .participant-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+        }
+
+        .participant-color-preview {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .participant-actions {
+            display: flex;
+            align-items: center;
+        }
+
+        .color-picker-container {
+            display: flex;
+            align-items: center;
+            margin-top: 5px;
+        }
+
+        .color-picker-label {
+            font-size: 12px;
+            margin-left: 8px;
+        }
+
+        input[type="color"] {
+            width: 25px;
+            height: 25px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .participant-upload {
+            background-color: #f0f0f0;
+            border: none;
+            padding: 5px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+
+        .participant-upload:hover {
+            background-color: #e0e0e0;
+        }
+
+        .no-participants {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+            font-style: italic;
+        }
+
+        /* ======= סגנונות ייחודיים לטלגרם ======= */
+        .service-message {
+            text-align: center;
+            margin: 10px 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .service-message span {
+            background-color: rgba(204, 224, 245, 0.92);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #505050;
+            box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
+        }
+
+        .sticker {
+            max-width: 150px;
+            max-height: 150px;
+            border-radius: 0;
+        }
+
+        .reply-to {
+            margin-bottom: 5px;
+            padding: 5px 8px;
+            border-right: 3px solid #5682a3;
+            background-color: rgba(86, 130, 163, 0.1);
+            border-radius: 4px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .reply-to .reply-sender {
+            font-weight: bold;
+            color: #5682a3;
+        }
+
+        .reply-to .reply-content {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+        }
+
+        .message-views {
+            margin-right: 8px;
+            font-size: 11px;
+            color: rgba(0, 0, 0, 0.45);
+        }
+
+        .message-reactions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .reaction {
+            display: inline-flex;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+
+        .reaction .emoji {
+            margin-left: 3px;
+        }
+
+        .reaction .count {
+            font-size: 11px;
+            color: #666;
+        }
+
+        .poll-container {
+            margin-top: 5px;
+        }
+
+        .poll-question {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .poll-option {
+            display: flex;
+            margin-bottom: 4px;
+        }
+
+        .poll-option-text {
+            flex: 1;
+        }
+
+        .poll-option-votes {
+            font-size: 12px;
+            color: #666;
+            margin-right: 5px;
+        }
+
+        .poll-option-bar {
+            height: 4px;
+            background-color: #ddd;
+            margin-top: 4px;
+            position: relative;
+        }
+
+        .poll-option-progress {
+            height: 100%;
+            background-color: #5682a3;
+            position: absolute;
+            top: 0;
+            right: 0;
+        }
+
+        .location-preview {
+            width: 100%;
+            height: 150px;
+            background-color: #f0f0f0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 5px;
+        }
+
+        .location-preview i {
+            font-size: 24px;
+            color: #5682a3;
+            margin-left: 10px;
+        }
+
+        .video-note {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        .video-note video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .voice-message {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .voice-message i {
+            font-size: 18px;
+            color: #5682a3;
+            margin-left: 10px;
+        }
+
+        .voice-message audio {
+            flex: 1;
+            height: 32px;
+        }
+
+        .voice-message-duration {
+            font-size: 12px;
+            color: #666;
+            margin-right: 10px;
+        }
+
+        /* סגנון לתגובות (ריאקציות) של טלגרם */
+        .reactions {
+            margin-top: 5px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .reaction {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 12px;
+            background-color: #e8f5fc;
+            color: #5682a3;
+        }
+
+        .reaction .emoji {
+            margin-left: 3px;
+        }
+
+        .reaction .count {
+            font-size: 11px;
+            margin-right: 3px;
+        }
+
+        /* מסגרת לסרטונים */
+        .video-container {
+            position: relative;
+            margin-bottom: 5px;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .video-container video {
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+        }
+
+        .video-duration {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+
+        /* סגנון לקובץ מצורף */
+        .document-container {
+            display: flex;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 5px;
+        }
+
+        .document-icon {
+            font-size: 24px;
+            margin-left: 10px;
+            color: #5682a3;
+        }
+
+        .document-info {
+            flex: 1;
+        }
+
+        .document-title {
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .document-size {
+            font-size: 11px;
+            color: #666;
+        }
+
+        /* סגנון לתצוגה של קבצי HEIC */
+        .heic-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        /* עיצוב לתמונות ממוזערות של וידאו */
+        .video-thumbnail {
+            position: relative;
+            max-width: 100%;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        .video-play-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 42px;
+            color: white;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .video-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+            text-align: center;
+        }
+
+        /* עיצוב לסטיקרים מונפשים */
+        .sticker-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 5px;
+        }
+
+        .sticker-emoji {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .sticker-info {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* עיצוב לאיש קשר */
+        .contact-preview {
+            margin-bottom: 5px;
+        }
+
+        .contact-info {
+            display: flex;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .contact-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #5682a3;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-left: 12px;
+        }
+
+        .contact-details {
+            flex: 1;
+        }
+
+        .contact-name {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .contact-phone {
+            font-size: 13px;
+            color: #666;
+            direction: ltr;
+            text-align: right;
+        }
+
+        /* עיצוב למיקום */
+        .location-box {
+            display: flex;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+
+        .location-box i {
+            font-size: 24px;
+            color: #e74c3c;
+            margin-left: 15px;
+        }
+
+        .location-info {
+            flex: 1;
+        }
+
+        .location-coordinates {
+            direction: ltr;
+            font-family: monospace;
+            margin: 5px 0;
+        }
+
+        .location-link {
+            display: inline-block;
+            padding: 5px 10px;
+            background-color: #5682a3;
+            color: white;
+            border-radius: 4px;
+            text-decoration: none;
+            margin-top: 5px;
+            font-size: 12px;
+        }
+
+        .location-link:hover {
+            background-color: #4a7295;
+        }
+
+        /* עיצוב להודעות וידאו עגולות */
+        .video-note-thumbnail {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin-bottom: 5px;
+            position: relative;
+        }
+
+        /* עיצוב לתצוגה מקדימה */
+        .preview-note {
+            font-size: 11px;
+            color: #666;
+            font-style: italic;
+            margin-top: 5px;
+            text-align: center;
+        }
+
+        /* סגנונות לאפשרויות הורדה */
+        .download-link {
+            display: inline-block;
+            padding: 5px 10px;
+            margin-top: 8px;
+            background-color: #5682a3;
+            color: white;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+
+        .download-link:hover {
+            background-color: #4a7295;
+            text-decoration: none;
+            color: white;
+        }
+
+        .download-link i {
+            margin-left: 5px;
+        }
+
+        /* עיצוב לקבצים להורדה */
+        .file-download-container {
+            display: flex;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+
+        .file-icon {
+            font-size: 24px;
+            margin-left: 15px;
+            color: #5682a3;
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .file-size {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .download-button {
+            background-color: #5682a3;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+
+        .download-button:hover {
+            background-color: #4a7295;
+            color: white;
+        }
+
+        /* סגנונות לתצוגת HEIC */
+        .heic-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        /* אלמנט טעינה */
+        .loading-media {
+            padding: 20px;
+            text-align: center;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* וידאו */
+        .video-download {
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        /* העלם את Data URL ארוכים מהקונסול */
+        .data-url {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- סרגל כלים -->
+    <div class="toolbar">
+        <input type="file" id="zip-file" accept=".zip">
+        <button id="upload-zip-btn">
+            <i class="fas fa-file-zipper"></i>
+            העלאת ZIP מלא
+        </button>
+        
+        <input type="file" id="json-file" accept=".json">
+        <button id="upload-json-btn">
+            <i class="fas fa-file-code"></i>
+            העלאת JSON בלבד
+        </button>
+        
+        <button id="settings-btn">
+            <i class="fas fa-cog"></i>
+            הגדרות מראה
+        </button>
+        
+        <button id="participants-btn">
+            <i class="fas fa-users"></i>
+            משתתפים
+        </button>
+        
+        <button id="export-html-btn">
+            <i class="fas fa-file-code"></i>
+            ייצוא ל-HTML
+        </button>
+        
+        <button id="clear-btn">
+            <i class="fas fa-trash"></i>
+            ניקוי הכל
+        </button>
+    </div>
+
+    <!-- מיכל השיחה -->
+    <div class="container">
+        <div id="chat-container">
+            <div class="no-chat">
+                <i class="fas fa-paper-plane"></i>
+                <p>אין שיחה להצגה</p>
+                <p>העלה קובץ ZIP של שיחת טלגרם כדי להתחיל</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- מודל לתמונות -->
+    <div id="image-modal" class="modal">
+        <span class="modal-close">&times;</span>
+        <img class="modal-content" id="modal-image">
+    </div>
+
+    <!-- מסך טעינה -->
+    <div id="loader" class="loader">
+        <i class="fas fa-spinner fa-spin"></i>
+        <div id="loader-text">טוען...</div>
+    </div>
+
+    <!-- הודעת סטטוס -->
+    <div id="status"></div>
+
+    <!-- פנל הגדרות -->
+    <div id="settings-panel" class="settings-panel">
+        <div class="settings-container">
+            <div class="settings-header">
+                <div class="settings-title">הגדרות מראה</div>
+                <div class="settings-close">&times;</div>
+            </div>
+            <div class="settings-section">
+                <h3>תמונת פרופיל</h3>
+                <div class="settings-preview">
+                    <div class="profile-preview" id="profile-preview">
+                        <span id="profile-initial"></span>
+                    </div>
+                </div>
+                <div class="file-input-wrapper">
+                    <label class="custom-file-input">
+                        בחר תמונה
+                        <input type="file" id="profile-image-input" accept="image/*" style="display: none;">
+                    </label>
+                    <button id="remove-profile-image" class="remove-image-btn" style="display: none;">
+                        <i class="fas fa-trash"></i> הסר תמונה
+                    </button>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h3>תמונת רקע לשיחה</h3>
+                <div class="background-preview" id="background-preview"></div>
+                <div class="file-input-wrapper">
+                    <label class="custom-file-input">
+                        בחר תמונת רקע
+                        <input type="file" id="background-image-input" accept="image/*" style="display: none;">
+                    </label>
+                    <button id="remove-background-image" class="remove-image-btn" style="display: none;">
+                        <i class="fas fa-trash"></i> הסר רקע
+                    </button>
+                </div>
+            </div>
+            <div class="settings-actions">
+                <button id="close-settings" class="toolbar-button">סגור</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- פנל משתתפים -->
+    <div id="participants-panel" class="settings-panel">
+        <div class="settings-container">
+            <div class="settings-header">
+                <div class="settings-title">ניהול משתתפים</div>
+                <div class="settings-close participants-close">&times;</div>
+            </div>
+            <div class="participants-section" id="participants-list">
+                <div class="no-participants">
+                    <p>אין משתתפים להצגה. העלה קובץ שיחה תחילה.</p>
+                </div>
+            </div>
+            <div class="settings-actions">
+                <button id="close-participants" class="toolbar-button">סגור</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ספריות חיצוניות -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <script>
+        // ===================================================
+        // =============== אובייקטים גלובליים ===============
+        // ===================================================
+
+        // מאגר קבצי מדיה
+        const mediaStore = new Map();
+        
+        // נתוני השיחה
+        let chatData = {
+            name: '',
+            type: '', // 'private', 'group' או 'channel'
+            messages: [],
+            about: ''
+        };
+
+        // מידע על תמונת פרופיל ורקע
+        let appSettings = {
+            profileImage: null,
+            backgroundImage: null
+        };
+
+        // מידע על משתתפים
+        let participants = new Map();
+
+        // מידע על המשתמש הנוכחי
+        let currentUser = {
+            id: null,
+            name: '',
+            username: ''
+        };
+
+        // ===================================================
+        // ============== טיפול באירועי לחיצות ==============
+        // ===================================================
+        
+        // אירועי כפתורים
+        document.getElementById('upload-json-btn').addEventListener('click', () => {
+            document.getElementById('json-file').click();
+        });
+        
+        document.getElementById('upload-zip-btn').addEventListener('click', () => {
+            document.getElementById('zip-file').click();
+        });
+        
+        document.getElementById('settings-btn').addEventListener('click', () => {
+            openSettingsPanel();
+        });
+        
+        document.getElementById('participants-btn').addEventListener('click', () => {
+            openParticipantsPanel();
+        });
+        
+        document.getElementById('export-html-btn').addEventListener('click', () => {
+            exportChat('html');
+        });
+        
+        document.getElementById('clear-btn').addEventListener('click', clearAll);
+        
+        // אירועי קובץ
+        document.getElementById('json-file').addEventListener('change', handleJsonFile);
+        document.getElementById('zip-file').addEventListener('change', handleZipFile);
+        
+        // אירועי הגדרות
+        document.getElementById('profile-image-input').addEventListener('change', handleProfileImageUpload);
+        document.getElementById('background-image-input').addEventListener('change', handleBackgroundImageUpload);
+        document.getElementById('remove-profile-image').addEventListener('click', removeProfileImage);
+        document.getElementById('remove-background-image').addEventListener('click', removeBackgroundImage);
+        document.querySelector('.settings-close').addEventListener('click', closeSettingsPanel);
+        document.getElementById('close-settings').addEventListener('click', closeSettingsPanel);
+        
+        // אירועי פנל משתתפים
+        document.querySelector('.participants-close').addEventListener('click', closeParticipantsPanel);
+        document.getElementById('close-participants').addEventListener('click', closeParticipantsPanel);
+        
+        // סגירת מודל תמונה
+        document.querySelector('.modal-close').addEventListener('click', closeModal);
+        
+        // סגירת מודל בלחיצה על Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+                closeSettingsPanel();
+                closeParticipantsPanel();
+            }
+        });
+
+        // ===================================================
+        // ============== טיפול בקבצים חיצוניים =============
+        // ===================================================
+        
+        // פונקציה להוספת ספריות נדרשות
+function loadExternalLibraries() {
+    // טען את ספריית Lottie להצגת סטיקרים מסוג TGS
+    if (!window.lottie) {
+        const lottieScript = document.createElement('script');
+        lottieScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js';
+        document.head.appendChild(lottieScript);
+        console.log('טעינת ספריית Lottie להצגת סטיקרים');
+    }
+}
+
+// פונקציה ליצירת פורמט להורדה מתוך קובץ מדיה
+function createDownloadableFile(mediaFile, fileName) {
+    if (!mediaFile || !mediaFile.data) return null;
+    
+    // יצירת מזהה ייחודי
+    const uniqueId = 'download_' + Math.random().toString(36).substr(2, 9);
+    
+    // יצירת בלוב
+    let blob;
+    if (mediaFile.data.startsWith('data:')) {
+        // המרת data URL לבלוב
+        const arr = mediaFile.data.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        blob = new Blob([u8arr], { type: mime });
+    } else {
+        // אם זה כבר בלוב, השתמש בו ישירות
+        blob = mediaFile.data;
+    }
+    
+    // יצירת URL לבלוב
+    const url = URL.createObjectURL(blob);
+    
+    // שמירת הקישור במאגר לניקוי מאוחר יותר
+    if (!window.downloadLinks) window.downloadLinks = {};
+    window.downloadLinks[uniqueId] = url;
+    
+    return {
+        id: uniqueId,
+        url: url,
+        fileName: fileName || mediaFile.name || 'file',
+        size: blob.size,
+        type: mediaFile.type || blob.type
+    };
+}
+
+// פונקציה לניקוי הקישורים להורדה
+function cleanupDownloadLinks() {
+    if (window.downloadLinks) {
+        Object.values(window.downloadLinks).forEach(url => {
+            URL.revokeObjectURL(url);
+        });
+        window.downloadLinks = {};
+    }
+}
+
+// פונקציה להמרת סטיקר TGS לאנימציה מוצגת
+function renderTgsSticker(mediaFile, containerId) {
+    if (!mediaFile || !mediaFile.data) return false;
+    
+    // וודא שספריית Lottie נטענה
+    if (!window.lottie) {
+        setTimeout(() => renderTgsSticker(mediaFile, containerId), 500);
+        return false;
+    }
+    
+    try {
+        // המרת סטיקר TGS (שהוא JSON מדוחס) לפורמט JSON רגיל
+        const container = document.getElementById(containerId);
+        if (!container) return false;
+        
+        // צור קובץ זמני להורדה
+        const downloadInfo = createDownloadableFile(mediaFile, 'sticker.tgs');
+        
+        // הצג את הסטיקר כגיף (כאן נצטרך להשתמש בספריה חיצונית להמרה, אך בינתיים נציג רק את האייקון)
+        container.innerHTML = `
+            <div class="sticker-placeholder">
+                <span class="sticker-emoji">🎬</span>
+                <div class="sticker-info">סטיקר מונפש</div>
+                <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-link">
+                    <i class="fas fa-download"></i> הורד את הסטיקר המקורי
+                </a>
+            </div>
+        `;
+        
+        return true;
+    } catch (error) {
+        console.error('שגיאה בהמרת סטיקר TGS:', error);
+        return false;
+    }
+}
+
+// פונקציה לטיפול בקובץ MOV והמרתו למשהו שאפשר להציג
+function handleMovVideo(mediaFile, containerId) {
+    if (!mediaFile || !mediaFile.data) return false;
+    
+    try {
+        const container = document.getElementById(containerId);
+        if (!container) return false;
+        
+        // צור קובץ זמני להורדה
+        const downloadInfo = createDownloadableFile(mediaFile, mediaFile.name || 'video.mov');
+        
+        // בדוק אם הדפדפן כנראה יכול להציג קבצי MOV
+        const canPlayMov = navigator.mediaCapabilities && 
+              navigator.mediaCapabilities.decodingInfo &&
+              navigator.mediaCapabilities.decodingInfo({
+                type: 'file',
+                video: {
+                    contentType: 'video/quicktime'
+                }
+              }).then(result => result.supported).catch(() => false);
+        
+        if (canPlayMov) {
+            // נסה להציג את הווידאו ישירות
+            container.innerHTML = `
+                <video controls width="100%">
+                    <source src="${mediaFile.data}" type="video/quicktime">
+                    הדפדפן שלך לא תומך בהצגת וידאו
+                </video>
+                <div class="video-download">
+                    <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-link">
+                        <i class="fas fa-download"></i> הורד את הוידאו
+                    </a>
+                </div>
+            `;
+        } else {
+            // הצג תמונה ממוזערת אם קיימת, או אייקון, עם קישור להורדה
+            container.innerHTML = `
+                <div class="video-thumbnail">
+                    <i class="fas fa-film" style="font-size: 48px; color: #5682a3;"></i>
+                    <div class="video-info">קובץ וידאו (MOV) - לא ניתן להציג ישירות בדפדפן</div>
+                    <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-link">
+                        <i class="fas fa-download"></i> הורד את הוידאו
+                    </a>
+                </div>
+            `;
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('שגיאה בטיפול בקובץ MOV:', error);
+        return false;
+    }
+}
+
+// פונקציה לטיפול בכל קובץ עם הוספת אפשרות הורדה
+function handleGenericFile(mediaFile, containerId) {
+    if (!mediaFile || !mediaFile.data) return false;
+    
+    try {
+        const container = document.getElementById(containerId);
+        if (!container) return false;
+        
+        // צור קובץ זמני להורדה
+        const downloadInfo = createDownloadableFile(mediaFile, mediaFile.name);
+        
+        // להציג אייקון מתאים לסוג הקובץ
+        const fileIcon = getFileIcon(mediaFile.name, mediaFile.type);
+        const fileSize = formatFileSize(downloadInfo.size);
+        
+        container.innerHTML = `
+            <div class="file-download-container">
+                <div class="file-icon">
+                    <i class="${fileIcon}"></i>
+                </div>
+                <div class="file-info">
+                    <div class="file-name">${mediaFile.name || 'קובץ'}</div>
+                    <div class="file-size">${fileSize}</div>
+                </div>
+                <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-button">
+                    <i class="fas fa-download"></i>
+                </a>
+            </div>
+        `;
+        
+        return true;
+    } catch (error) {
+        console.error('שגיאה בטיפול בקובץ:', error);
+        return false;
+    }
+}
+
+        // טיפול בקובץ JSON
+        function handleJsonFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            showLoader('מעבד קובץ JSON...');
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const jsonData = JSON.parse(e.target.result);
+                    processTelegramExport(jsonData);
+                    updateChatView();
+                    showStatusMessage('השיחה נטענה בהצלחה', 'success');
+                } catch (error) {
+                    console.error('Error parsing JSON:', error);
+                    showStatusMessage('שגיאה בטעינת קובץ ה-JSON', 'error');
+                }
+                hideLoader();
+            };
+            reader.onerror = function() {
+                console.error('Error reading JSON file');
+                showStatusMessage('שגיאה בקריאת קובץ ה-JSON', 'error');
+                hideLoader();
+            };
+            reader.readAsText(file);
+        }
+        
+        // פונקציה לשמירת תמונות ממוזערות
+function saveThumbnails(allFiles, zip) {
+    console.log("שומר תמונות ממוזערות...");
+    
+    // מצא את כל הקבצים שהם תמונות ממוזערות
+    const thumbnailFiles = allFiles.filter(file => 
+        file.path.includes('_thumb.') || 
+        file.path.includes('thumbnail')
+    );
+    
+    const thumbnailPromises = thumbnailFiles.map(file => {
+        return file.entry.async('blob').then(function(blob) {
+            return new Promise(function(resolve) {
+                const fileName = getFileNameFromPath(file.path);
+                const fileType = getFileType(fileName, blob.type);
+                
+                const reader = new FileReader();
+                reader.onload = function() {
+                    // שמור את התמונה הממוזערת במאגר המדיה
+                    mediaStore.set(file.path, {
+                        data: reader.result,
+                        type: fileType,
+                        name: fileName,
+                        path: file.path,
+                        is_thumbnail: true
+                    });
+                    
+                    resolve();
+                };
+                reader.readAsDataURL(blob);
+            });
+        });
+    });
+    
+    return Promise.all(thumbnailPromises);
+}
+
+        // טיפול בקובץ ZIP מלא
+        async function handleZipFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    showLoader('מעבד קובץ ZIP...');
+    
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const data = e.target.result;
+        
+        try {
+            const zip = await JSZip.loadAsync(data);
+            let mediaCount = 0;
+            let jsonFound = false;
+            let jsonData = null;
+            
+            // כל הקבצים בגיבוי
+            const allFiles = [];
+            
+            zip.forEach(function(relativePath, zipEntry) {
+                if (!zipEntry.dir) {
+                    allFiles.push({
+                        path: relativePath,
+                        entry: zipEntry
+                    });
+                }
+            });
+            
+            // חפש את קובץ ה-JSON הראשי
+            const jsonFiles = allFiles.filter(file => file.path.endsWith('result.json'));
+            
+            if (jsonFiles.length === 0) {
+                showStatusMessage('לא נמצא קובץ JSON ראשי (result.json) בארכיון', 'error');
+                hideLoader();
+                return;
+            }
+            
+            // טען תחילה את קובץ ה-JSON
+            try {
+                const jsonContent = await jsonFiles[0].entry.async('text');
+                jsonData = JSON.parse(jsonContent);
+                jsonFound = true;
+                processTelegramExport(jsonData);
+                
+                // מעבד קבצי מדיה
+                console.log('מעבד קבצי מדיה...');
+
+                // שמור תחילה את התמונות הממוזערות
+                await saveThumbnails(allFiles, zip);
+
+                // קבצים בעייתיים שדורשים טיפול מיוחד
+                const problematicFiles = [
+                    "IMG_2435.MOV",
+                    "AnimatedSticker.tgs",
+                    "IMG_6855.HEIC",
+                    "video.mp4"  // הוידאו העגול
+                ];
+
+                // טיפול מיוחד בקבצים הבעייתיים
+                const specialMediaFiles = allFiles.filter(file => {
+                    const fileName = getFileNameFromPath(file.path);
+                    return problematicFiles.includes(fileName);
+                });
+
+                console.log(`נמצאו ${specialMediaFiles.length} קבצים בעייתיים`);
+
+                // עיבוד הקבצים הבעייתיים תחילה
+                const specialPromises = specialMediaFiles.map(file => {
+                    return file.entry.async('blob').then(function(blob) {
+                        return new Promise(function(resolve) {
+                            const fileName = getFileNameFromPath(file.path);
+                            console.log(`מעבד קובץ בעייתי: ${fileName}, גודל: ${blob.size}, סוג: ${blob.type}`);
+                            
+                            const reader = new FileReader();
+                            reader.onload = function() {
+                                const fileType = getFileType(fileName, blob.type);
+                                
+                                // שמור עם כל הדרכים האפשריות לגישה לקובץ
+                                mediaStore.set(fileName, {
+                                    data: reader.result,
+                                    type: fileType,
+                                    name: fileName,
+                                    path: file.path,
+                                    size: blob.size
+                                });
+                                
+                                mediaStore.set(file.path, {
+                                    data: reader.result,
+                                    type: fileType,
+                                    name: fileName,
+                                    path: file.path,
+                                    size: blob.size
+                                });
+                                
+                                // שמור גם לפי הנתיב החלקי
+                                const partialPath = file.path.split('/').pop();
+                                if (partialPath !== fileName) {
+                                    mediaStore.set(partialPath, {
+                                        data: reader.result,
+                                        type: fileType,
+                                        name: fileName,
+                                        path: file.path,
+                                        size: blob.size
+                                    });
+                                }
+                                
+                                console.log(`קובץ ${fileName} נשמר בהצלחה`);
+                                resolve();
+                            };
+                            reader.readAsDataURL(blob);
+                        });
+                    }).catch(error => {
+                        console.error(`שגיאה בעיבוד הקובץ ${file.path}:`, error);
+                        return Promise.resolve(); // המשך גם אם יש שגיאה
+                    });
+                });
+
+                await Promise.all(specialPromises);
+
+                // עכשיו עבד את שאר הקבצים
+                const regularMediaFiles = allFiles.filter(file => {
+                    // דלג על קובץ ה-JSON, תמונות ממוזערות, וקבצים שכבר עיבדנו
+                    const fileName = getFileNameFromPath(file.path);
+                    return file.path !== jsonFiles[0].path && 
+                           !file.path.includes('_thumb.') && 
+                           !file.path.endsWith('.json') &&
+                           !problematicFiles.includes(fileName);
+                });
+
+                console.log(`מעבד ${regularMediaFiles.length} קבצי מדיה רגילים...`);
+
+                // עיבוד שאר הקבצים
+                const mediaPromises = regularMediaFiles.map(file => {
+                    return file.entry.async('blob').then(function(blob) {
+                        return new Promise(function(resolve) {
+                            const fileName = getFileNameFromPath(file.path);
+                            const dirName = getDirNameFromPath(file.path);
+                            const fileType = getFileType(fileName, blob.type);
+                            
+                            const reader = new FileReader();
+                            reader.onload = function() {
+                                // שמור תיקייה ושם קובץ מלא לזיהוי טוב יותר
+                                mediaStore.set(fileName, {
+                                    data: reader.result,
+                                    type: fileType,
+                                    name: fileName,
+                                    path: file.path,
+                                    directory: dirName
+                                });
+                                
+                                // שמור גם עם הנתיב המלא כמפתח
+                                mediaStore.set(file.path, {
+                                    data: reader.result,
+                                    type: fileType,
+                                    name: fileName,
+                                    path: file.path,
+                                    directory: dirName
+                                });
+                                
+                                mediaCount++;
+                                if (mediaCount % 10 === 0) {
+                                    updateLoaderText(`מעבד קבצי מדיה... ${mediaCount}/${regularMediaFiles.length + specialMediaFiles.length}`);
+                                }
+                                resolve();
+                            };
+                            reader.readAsDataURL(blob);
+                        });
+                    }).catch(error => {
+                        console.error(`שגיאה בעיבוד הקובץ ${file.path}:`, error);
+                        return Promise.resolve(); // המשך גם אם יש שגיאה
+                    });
+                });
+
+                await Promise.all(mediaPromises);
+                console.log('מאגר המדיה:', Array.from(mediaStore.keys()));
+                updateChatView();
+                showStatusMessage(`השיחה נטענה בהצלחה עם ${mediaCount + specialMediaFiles.length} קבצי מדיה`, 'success');
+                hideLoader();
+                
+            } catch (error) {
+                console.error('Error parsing JSON:', error);
+                showStatusMessage('שגיאה בעיבוד קובץ ה-JSON', 'error');
+                hideLoader();
+            }
+        } catch (error) {
+            console.error('Error loading zip file:', error);
+            showStatusMessage('שגיאה בפתיחת קובץ הארכיון', 'error');
+            hideLoader();
+        }
+    };
+    
+    reader.onerror = function() {
+        console.error('Error reading zip file');
+        showStatusMessage('שגיאה בקריאת קובץ הארכיון', 'error');
+        hideLoader();
+    };
+    
+    reader.readAsArrayBuffer(file);
+}
+
+        // חילוץ שם קובץ מנתיב
+        function getFileNameFromPath(path) {
+            if (path.includes('/')) {
+                // אם יש נתיב תיקיות, קח רק את החלק האחרון
+                const parts = path.split('/');
+                return parts[parts.length - 1];
+            }
+            return path;
+        }
+        
+        // חילוץ שם תיקייה מנתיב
+        function getDirNameFromPath(path) {
+            if (path.includes('/')) {
+                const parts = path.split('/');
+                if (parts.length > 1) {
+                    return parts[parts.length - 2]; // התיקייה האחרונה
+                }
+            }
+            return '';
+        }
+        
+        // בדיקה אם הקובץ הוא קובץ מדיה
+        function isMediaFile(fileName) {
+            const mediaExtensions = [
+                '.jpg', '.jpeg', '.png', '.gif', '.webp', '.tgs',  // תמונות וסטיקרים
+                '.mp4', '.avi', '.mov', '.webm',                   // וידאו
+                '.mp3', '.ogg', '.wav', '.m4a', '.opus',           // אודיו
+                '.pdf', '.doc', '.docx',                           // מסמכים
+                '.tgz', '.zip', '.rar'                             // ארכיונים
+            ];
+            
+            const lowerName = fileName.toLowerCase();
+            
+            // תבנית זיהוי שמות קבצי טלגרם
+            const telegramFilePatterns = [
+                'photo_', 'video_', 'audio_', 'voice_', 
+                'sticker_', 'animation_', 'document_',
+                'round_video_', 'profile_photo_'
+            ];
+            
+            // בדוק סיומות קובץ
+            const hasMediaExtension = mediaExtensions.some(ext => lowerName.endsWith(ext));
+            
+            // בדוק תבניות שמות קבצים של טלגרם
+            const hasTelegramPattern = telegramFilePatterns.some(pattern => lowerName.includes(pattern));
+            
+            // בדוק אם זה קובץ thumbnail
+            const isThumbnail = lowerName.includes('_thumb') || lowerName.includes('_thumbnail');
+            
+            return hasMediaExtension || hasTelegramPattern || isThumbnail;
+        }
+        
+        // זיהוי סוג הקובץ
+        function getFileType(fileName, fallbackType) {
+    const lowerName = typeof fileName === 'string' ? fileName.toLowerCase() : '';
+    
+    // Match by extension for better type detection
+    if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.includes('photo_')) {
+        return 'image/jpeg';
+    }
+    if (lowerName.endsWith('.png')) {
+        return 'image/png';
+    }
+    if (lowerName.endsWith('.heic') || lowerName.endsWith('.HEIC')) {
+        return 'image/heic'; // HEIC format
+    }
+    if (lowerName.endsWith('.mp4') || lowerName.includes('video_')) {
+        return 'video/mp4';
+    }
+    if (lowerName.endsWith('.mov') || lowerName.endsWith('.MOV')) {
+        return 'video/quicktime'; // MOV format
+    }
+    if (lowerName.includes('round_video_')) {
+        return 'video/mp4';
+    }
+    if (lowerName.endsWith('.ogg') || lowerName.endsWith('.opus') || lowerName.includes('voice_')) {
+        return 'audio/ogg';
+    }
+    if (lowerName.endsWith('.mp3') || lowerName.includes('audio_')) {
+        return 'audio/mp3';
+    }
+    if (lowerName.endsWith('.webp') || lowerName.includes('sticker_')) {
+        return 'image/webp';
+    }
+    if (lowerName.endsWith('.tgs')) {
+        return 'application/x-tgsticker';
+    }
+    if (lowerName.endsWith('.gif') || lowerName.includes('animation_')) {
+        return 'image/gif';
+    }
+    
+    // Add more file types as needed
+    if (lowerName.endsWith('.pdf')) return 'application/pdf';
+    if (lowerName.endsWith('.doc') || lowerName.endsWith('.docx')) return 'application/msword';
+    if (lowerName.endsWith('.wav')) return 'audio/wav';
+    if (lowerName.endsWith('.m4a')) return 'audio/m4a';
+    
+    // Return fallback type if provided
+    return fallbackType || 'application/octet-stream';
+}
+
+        // ===================================================
+        // ================ עיבוד ייצוא טלגרם ================
+        // ===================================================
+        
+        // פונקציה לעיבוד הייצוא של טלגרם
+        function processTelegramExport(data) {
+    // ניקוי מאגר המשתתפים הקודם
+    participants.clear();
+    
+    // עיבוד מידע על השיחה
+    if (data.name) {
+        chatData.name = data.name;
+    } else if (data.chat && data.chat.name) {
+        chatData.name = data.chat.name;
+    } else {
+        chatData.name = 'Telegram Chat';
+    }
+    
+    if (data.type) {
+        chatData.type = data.type;
+    } else if (data.chat && data.chat.type) {
+        chatData.type = data.chat.type;
+    } else {
+        chatData.type = 'private';
+    }
+    
+    chatData.about = data.about || (data.chat && data.chat.about) || '';
+    
+    // זיהוי המשתמש הנוכחי
+    if (data.personal_information) {
+        currentUser.id = data.personal_information.user_id || null;
+        currentUser.name = data.personal_information.first_name || '';
+        if (data.personal_information.last_name) {
+            currentUser.name += ' ' + data.personal_information.last_name;
+        }
+        currentUser.username = data.personal_information.username || '';
+    }
+    
+    // עיבוד רשימת המשתתפים/אנשי קשר
+    const usersData = data.users || (data.chat && data.chat.users) || [];
+    
+    usersData.forEach(user => {
+        let userName = user.first_name || '';
+        if (user.last_name) {
+            userName += ' ' + user.last_name;
+        }
+        
+        // אם אין שם, השתמש בשם המשתמש
+        if (!userName && user.username) {
+            userName = user.username;
+        }
+        
+        // אם עדיין אין שם, השתמש במזהה
+        if (!userName) {
+            userName = `User ${user.id}`;
+        }
+        
+        // הוסף את המשתמש למאגר המשתתפים
+        addParticipant(user.id, userName, user.username);
+    });
+    
+    // עיבוד ההודעות
+    chatData.messages = [];
+    
+    const messagesData = data.messages || (data.chat && data.chat.messages) || [];
+    
+    messagesData.forEach(msg => {
+        // טיפול בסוגים שונים של הודעות
+        if (msg.type === 'service' || msg.action) {
+            // הודעת שירות (הצטרפות/עזיבה/שינוי שם וכו')
+            chatData.messages.push({
+                id: msg.id,
+                type: 'service',
+                date: formatDate(msg.date),
+                text: msg.text || msg.action || '',
+                action: msg.action || ''
+            });
+        } else {
+            // הודעה רגילה
+            let isOutgoing = false;
+            let senderId = msg.from_id;
+            
+            // בדוק אם ההודעה היא יוצאת (נשלחה ע"י המשתמש הנוכחי)
+            if (msg.from_id === currentUser.id || msg.out || msg.outgoing) {
+                isOutgoing = true;
+            }
+            
+            // בחלק מהפורמטים, ה-ID של השולח נמצא תחת 'from'
+            if (!senderId && msg.from) {
+                if (typeof msg.from === 'object' && msg.from.id) {
+                    senderId = msg.from.id;
+                } else if (typeof msg.from === 'string' || typeof msg.from === 'number') {
+                    senderId = msg.from;
+                }
+            }
+            
+            // קבל שם השולח
+            let senderName = msg.from_name || '';
+            
+            // אם אין שם מפורש, נסה למצוא את השולח ברשימת המשתתפים
+            if (!senderName && senderId && participants.has(senderId)) {
+                senderName = participants.get(senderId).name;
+            } else if (!senderName && msg.from) {
+                // אם יש אובייקט 'from', קח את השם ממנו
+                if (typeof msg.from === 'object') {
+                    senderName = msg.from.first_name || '';
+                    if (msg.from.last_name) {
+                        senderName += ' ' + msg.from.last_name;
+                    }
+                } else {
+                    senderName = String(msg.from);
+                }
+            }
+            
+            // אם עדיין אין שם שולח, הגדר כלא ידוע
+            if (!senderName) {
+                senderName = 'Unknown';
+            }
+            
+            // בדוק אם השולח כבר קיים ברשימת המשתתפים, אם לא - הוסף אותו
+            if (senderId && !participants.has(senderId)) {
+                addParticipant(senderId, senderName, null);
+            }
+            
+            // הכן את ההודעה
+            const messageText = msg.text || '';
+            
+            // חפש את הקובץ המדיה המתאים
+            let mediaType = null;
+            let mediaFile = null;
+            let mediaFileId = null;
+            let mediaDuration = null;
+            let fileName = null;
+            
+            // בדוק את כל סוגי המדיה האפשריים
+            if (msg.photo) {
+                mediaType = 'photo';
+                mediaFile = msg.photo;
+                mediaFileId = getMediaId(msg.photo, 'photo');
+            } else if (msg.video) {
+                mediaType = 'video';
+                mediaFile = msg.video;
+                mediaFileId = getMediaId(msg.video, 'video');
+                mediaDuration = msg.video.duration;
+            } else if (msg.file) {
+                // טיפול בקבצים מבוסס על media_type
+                if (msg.media_type === 'video_file' || msg.mime_type?.includes('video')) {
+                    mediaType = 'video';
+                    fileName = msg.file_name;
+                } else if (msg.media_type === 'voice_message') {
+                    mediaType = 'voice';
+                    fileName = msg.file_name;
+                } else if (msg.media_type === 'video_message') {
+                    mediaType = 'video_note';
+                    fileName = msg.file_name;
+                } else if (msg.media_type === 'sticker') {
+                    mediaType = 'sticker';
+                    fileName = msg.file_name;
+                } else if (msg.media_type === 'animation') {
+                    mediaType = 'animation';
+                    fileName = msg.file_name;
+                } else {
+                    mediaType = 'document';
+                    fileName = msg.file_name;
+                }
+                
+                mediaFile = msg.file;
+                mediaFileId = getFileNameFromPath(msg.file);
+                mediaDuration = msg.duration_seconds;
+            } else if (msg.voice) {
+                mediaType = 'voice';
+                mediaFile = msg.voice;
+                mediaFileId = getMediaId(msg.voice, 'voice');
+                mediaDuration = msg.voice.duration;
+            } else if (msg.audio) {
+                mediaType = 'audio';
+                mediaFile = msg.audio;
+                mediaFileId = getMediaId(msg.audio, 'audio');
+                mediaDuration = msg.audio.duration;
+            } else if (msg.sticker) {
+                mediaType = 'sticker';
+                mediaFile = msg.sticker;
+                mediaFileId = getMediaId(msg.sticker, 'sticker');
+            } else if (msg.animation) {
+                mediaType = 'animation';
+                mediaFile = msg.animation;
+                mediaFileId = getMediaId(msg.animation, 'animation');
+            } else if (msg.document || msg.file) {
+                mediaType = 'document';
+                mediaFile = msg.document || msg.file;
+                mediaFileId = getMediaId(msg.document || msg.file, 'document');
+                fileName = msg.file_name;
+            } else if (msg.location) {
+                mediaType = 'location';
+                mediaFile = null;
+                mediaFileId = null;
+            } else if (msg.poll) {
+                mediaType = 'poll';
+                mediaFile = null;
+                mediaFileId = null;
+            } else if (msg.video_note) {
+                mediaType = 'video_note';
+                mediaFile = msg.video_note;
+                mediaFileId = getMediaId(msg.video_note, 'round_video');
+                mediaDuration = msg.video_note.duration;
+            }
+            
+            // יצירת אובייקט הודעה חדש
+            const message = {
+                id: msg.id,
+                type: 'message',
+                date: formatDate(msg.date),
+                time: formatTime(msg.date),
+                timestamp: new Date(msg.date).getTime(),
+                sender: senderName,
+                senderId: senderId,
+                text: messageText,
+                isOutgoing: isOutgoing,
+                edited: msg.edited || false,
+                forwarded: msg.forwarded_from ? true : false,
+                forwarded_from: msg.forwarded_from || null,
+                reply_to: msg.reply_to_message_id || null,
+                mediaType: mediaType,
+                mediaFile: mediaFile,
+                mediaFileId: mediaFileId,
+                mediaDuration: mediaDuration,
+                file: msg.file,                     // שמירת נתיב הקובץ המקורי
+                file_name: fileName || msg.file_name,  // שמירת שם הקובץ
+                sticker_emoji: msg.sticker_emoji,   // אימוג'י של סטיקר
+                mime_type: msg.mime_type,           // סוג MIME
+                media_type: msg.media_type,         // סוג המדיה כפי שמוגדר בטלגרם
+                views: msg.views || 0,
+                reactions: msg.reactions || []
+            };
+
+            // טיפול באיש קשר
+            if (msg.contact_information) {
+                message.mediaType = 'contact';
+                message.contact = msg.contact_information;
+            }
+
+            // טיפול במיקום
+            if (msg.location_information) {
+                message.mediaType = 'location';
+                message.location = msg.location_information;
+            }
+
+            // בדיקה נוספת לסטיקרים
+            if (message.mediaType === 'sticker' && msg.file && msg.file.endsWith('.tgs')) {
+                message.is_animated_sticker = true;
+            }
+
+            // בדיקה מיוחדת לקבצי HEIC
+            if (message.file_name && message.file_name.toLowerCase().endsWith('.heic')) {
+                message.is_heic = true;
+            }
+
+            // טיפול ספציפי לקבצי MOV
+            if (message.file_name && message.file_name.toLowerCase().endsWith('.mov')) {
+                message.mediaType = 'video';
+            }
+
+            // הוספת המידע על התמונה הממוזערת
+            if (msg.thumbnail) {
+                message.thumbnail = msg.thumbnail;
+                message.thumbnail_file_size = msg.thumbnail_file_size;
+            }
+                        
+                        chatData.messages.push(message);
+                    }
+                });
+                
+                // מיון ההודעות לפי תאריך
+                chatData.messages.sort((a, b) => {
+                    if (a.timestamp && b.timestamp) {
+                        return a.timestamp - b.timestamp;
+                    }
+                    return 0;
+                });
+            }
+
+        // פונקציה לחילוץ מזהה מדיה מאובייקט מדיה
+        function getMediaId(mediaObj, type) {
+            if (!mediaObj) return null;
+            
+            // נסה למצוא מזהה מדיה בפורמטים שונים
+            if (mediaObj.file_id) {
+                return mediaObj.file_id;
+            }
+            
+            if (mediaObj.id) {
+                return `${type}_${mediaObj.id}`;
+            }
+            
+            if (mediaObj.file_name) {
+                return mediaObj.file_name;
+            }
+            
+            if (mediaObj.file_path) {
+                return getFileNameFromPath(mediaObj.file_path);
+            }
+            
+            // אם אין מזהה מפורש, החזר null
+            return null;
+        }
+        
+        // פורמט תאריך
+        function formatDate(dateString) {
+            // בדוק אם זה תאריך תקין
+            if (!dateString) return '';
+            
+            const date = new Date(dateString);
+            
+            // בדוק אם התאריך תקין
+            if (isNaN(date.getTime())) return dateString;
+            
+            return date.toLocaleDateString('he-IL', { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit' 
+            });
+        }
+        
+        // פורמט שעה
+        function formatTime(dateString) {
+            // בדוק אם זה תאריך תקין
+            if (!dateString) return '';
+            
+            const date = new Date(dateString);
+            
+            // בדוק אם התאריך תקין
+            if (isNaN(date.getTime())) return '';
+            
+            return date.toLocaleTimeString('he-IL', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+        
+        // פורמט משך זמן (לסרטונים והודעות קוליות)
+        function formatDuration(seconds) {
+            if (!seconds || isNaN(seconds)) return '00:00';
+            
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = Math.floor(seconds % 60);
+            return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        // ===================================================
+        // ================== ניהול משתתפים ==================
+        // ===================================================
+        
+        // יצירת צבע רנדומלי לכל משתתף
+        function generateRandomColor() {
+            // צבעים בסגנון טלגרם
+            const colors = [
+                '#5682a3', '#4fad2d', '#d55555', '#a85e93',
+                '#e17076', '#f2a45c', '#7ec4ea', '#65aadd',
+                '#9a86bd', '#5fbed5', '#76c84d', '#ff5555',
+                '#ffa85c', '#82b1ff', '#0088cc', '#36a3e5',
+                '#69b4ff', '#ff708e', '#c67171', '#9b7dd4'
+            ];
+            
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+        
+        // הוספת משתתף חדש
+        function addParticipant(id, name, username) {
+            // וודא שה-ID הוא מחרוזת
+            const participantId = String(id);
+            
+            if (!participants.has(participantId)) {
+                participants.set(participantId, {
+                    id: participantId,
+                    name: name,
+                    username: username || '',
+                    color: generateRandomColor(),
+                    avatar: null
+                });
+            }
+            return participants.get(participantId);
+        }
+        
+        // עדכון רשימת המשתתפים בפנל
+        function updateParticipantsList() {
+            const container = document.getElementById('participants-list');
+            
+            if (participants.size === 0) {
+                container.innerHTML = `
+                    <div class="no-participants">
+                        <p>אין משתתפים להצגה. העלה קובץ שיחה תחילה.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let participantsHtml = '';
+            
+            participants.forEach((participant, id) => {
+                const initialLetter = participant.name.charAt(0);
+                let avatarContent = '';
+                
+                if (participant.avatar) {
+                    avatarContent = `<img src="${participant.avatar}" alt="${participant.name}">`;
+                } else {
+                    avatarContent = initialLetter;
+                }
+                
+                participantsHtml += `
+                    <div class="participant-item" data-id="${id}">
+                        <div class="participant-avatar" style="background-color: ${participant.color}">
+                            ${avatarContent}
+                        </div>
+                        <div class="participant-info">
+                            <div class="participant-name">
+                                <span class="participant-color-preview" style="background-color: ${participant.color}"></span>
+                                ${participant.name}
+                                ${participant.username ? `(@${participant.username})` : ''}
+                            </div>
+                            <div class="color-picker-container">
+                                <span class="color-picker-label">צבע:</span>
+                                <input type="color" class="participant-color" value="${participant.color}" 
+                                    data-id="${id}" onchange="updateParticipantColor('${id}', this.value)">
+                            </div>
+                        </div>
+                        <div class="participant-actions">
+                            <label class="participant-upload">
+                                <i class="fas fa-image"></i>
+                                <input type="file" accept="image/*" style="display: none;" 
+                                    data-id="${id}" onchange="handleParticipantAvatarUpload(event, '${id}')">
+                            </label>
+                            
+                            <button class="remove-image-btn" 
+                                onclick="removeParticipantAvatar('${id}')" 
+                                style="display: ${participant.avatar ? 'inline-block' : 'none'};">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = participantsHtml;
+        }
+        
+        // עדכון צבע למשתתף
+        function updateParticipantColor(id, color) {
+            if (participants.has(id)) {
+                participants.get(id).color = color;
+                updateParticipantsList();
+                updateChatView();
+            }
+        }
+        
+        // טיפול בהעלאת תמונה למשתתף
+        function handleParticipantAvatarUpload(event, id) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (participants.has(id)) {
+                    participants.get(id).avatar = e.target.result;
+                    updateParticipantsList();
+                    updateChatView();
+                }
+            };
+            
+            reader.readAsDataURL(file);
+        }
+        
+        // הסרת תמונת משתתף
+        function removeParticipantAvatar(id) {
+            if (participants.has(id)) {
+                participants.get(id).avatar = null;
+                updateParticipantsList();
+                updateChatView();
+            }
+        }
+        
+        // פתיחת פנל משתתפים
+        function openParticipantsPanel() {
+            updateParticipantsList();
+            document.getElementById('participants-panel').style.display = 'flex';
+        }
+        
+        // סגירת פנל משתתפים
+        function closeParticipantsPanel() {
+            document.getElementById('participants-panel').style.display = 'none';
+        }
+
+        // ===================================================
+        // ================ טיפול בהגדרות מראה ================
+        // ===================================================
+        
+        // טיפול בהעלאת תמונת פרופיל
+        function handleProfileImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                appSettings.profileImage = e.target.result;
+                updateProfilePreview();
+                updateChatView();
+                document.getElementById('remove-profile-image').style.display = 'inline-block';
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // טיפול בהעלאת תמונת רקע
+        function handleBackgroundImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                appSettings.backgroundImage = e.target.result;
+                updateBackgroundPreview();
+                updateChatView();
+                document.getElementById('remove-background-image').style.display = 'inline-block';
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // עדכון תצוגה מקדימה של תמונת פרופיל
+        function updateProfilePreview() {
+            const preview = document.getElementById('profile-preview');
+            const initial = document.getElementById('profile-initial');
+            
+            if (appSettings.profileImage) {
+                preview.innerHTML = `<img src="${appSettings.profileImage}" alt="תמונת פרופיל">`;
+            } else {
+                preview.innerHTML = '';
+                initial.textContent = chatData.name ? chatData.name.charAt(0) : '?';
+                preview.appendChild(initial);
+            }
+        }
+        
+        // עדכון תצוגה מקדימה של תמונת רקע
+        function updateBackgroundPreview() {
+            const preview = document.getElementById('background-preview');
+            
+            if (appSettings.backgroundImage) {
+                preview.style.backgroundImage = `url(${appSettings.backgroundImage})`;
+                preview.style.border = 'none';
+            } else {
+                preview.style.backgroundImage = 'none';
+                preview.style.border = '2px dashed #ddd';
+            }
+        }
+        
+        // הסרת תמונת פרופיל
+        function removeProfileImage() {
+            appSettings.profileImage = null;
+            document.getElementById('profile-image-input').value = '';
+            document.getElementById('remove-profile-image').style.display = 'none';
+            updateProfilePreview();
+            updateChatView();
+        }
+        
+        // הסרת תמונת רקע
+        function removeBackgroundImage() {
+            appSettings.backgroundImage = null;
+            document.getElementById('background-image-input').value = '';
+            document.getElementById('remove-background-image').style.display = 'none';
+            updateBackgroundPreview();
+            updateChatView();
+        }
+        
+        // פתיחת פנל הגדרות
+        function openSettingsPanel() {
+            // עדכון תצוגה מקדימה לפני פתיחת הפנל
+            updateProfilePreview();
+            updateBackgroundPreview();
+            
+            // הצגת/הסתרת כפתורי הסרה בהתאם למצב
+            document.getElementById('remove-profile-image').style.display = 
+                appSettings.profileImage ? 'inline-block' : 'none';
+                
+            document.getElementById('remove-background-image').style.display = 
+                appSettings.backgroundImage ? 'inline-block' : 'none';
+            
+            // הצגת הפנל
+            document.getElementById('settings-panel').style.display = 'flex';
+        }
+        
+        // סגירת פנל הגדרות
+        function closeSettingsPanel() {
+            document.getElementById('settings-panel').style.display = 'none';
+        }
+
+        // ===================================================
+        // ================ עדכון תצוגת השיחה ================
+        // ===================================================
+        
+        function updateChatView() {
+            if (chatData.messages.length === 0) return;
+            
+            const container = document.getElementById('chat-container');
+            const firstLetter = chatData.name.charAt(0);
+            
+            // יצירת תבנית השיחה עם תמיכה בתמונת פרופיל
+            let avatarContent = '';
+            if (appSettings.profileImage) {
+                avatarContent = `<img src="${appSettings.profileImage}" alt="תמונת פרופיל">`;
+            } else {
+                avatarContent = firstLetter;
+            }
+            
+            // הוספת מידע ספציפי לטלגרם
+            let chatTypeInfo = '';
+            if (chatData.type === 'private') {
+                chatTypeInfo = 'שיחה פרטית';
+            } else if (chatData.type === 'group') {
+                chatTypeInfo = 'קבוצה';
+            } else if (chatData.type === 'channel') {
+                chatTypeInfo = 'ערוץ';
+            } else if (chatData.type === 'supergroup') {
+                chatTypeInfo = 'סופר-קבוצה';
+            } else {
+                chatTypeInfo = `${chatData.messages.length} הודעות`;
+            }
+            
+            container.innerHTML = `
+                <div class="chat-header">
+                    <div class="avatar">${avatarContent}</div>
+                    <div class="chat-info">
+                        <h2>${chatData.name}</h2>
+                        <p>${chatTypeInfo}</p>
+                    </div>
+                </div>
+                <div class="chat-body ${appSettings.backgroundImage ? 'has-background' : ''}">
+                    <div id="messages-container"></div>
+                </div>
+            `;
+            
+            // הגדר רקע אם קיים
+            const chatBody = document.querySelector('.chat-body');
+            if (appSettings.backgroundImage) {
+                chatBody.style.backgroundImage = `url(${appSettings.backgroundImage})`;
+            } else {
+                chatBody.style.backgroundImage = 'none';
+            }
+            
+            const messagesContainer = document.getElementById('messages-container');
+            let currentDate = null;
+            
+            // יצירת ההודעות
+            chatData.messages.forEach(message => {
+                // הוספת כותרת תאריך אם התאריך השתנה
+                if (message.date !== currentDate) {
+                    currentDate = message.date;
+                    const dateHeader = document.createElement('div');
+                    dateHeader.className = 'date-header';
+                    dateHeader.innerHTML = `<span>${currentDate}</span>`;
+                    messagesContainer.appendChild(dateHeader);
+                }
+                
+                // טיפול בהודעת שירות
+                if (message.type === 'service') {
+                    const serviceElement = document.createElement('div');
+                    serviceElement.className = 'service-message';
+                    serviceElement.innerHTML = `<span>${message.text}</span>`;
+                    messagesContainer.appendChild(serviceElement);
+                    return;
+                }
+                
+                // יצירת מיכל ההודעה
+                const messageElement = document.createElement('div');
+                messageElement.className = `message ${message.isOutgoing ? 'out' : 'in'}`;
+                
+                // בועת ההודעה
+                const bubble = document.createElement('div');
+                bubble.className = 'message-bubble';
+                
+                // שם השולח (רק להודעות שהתקבלו)
+                if (!message.isOutgoing && chatData.type !== 'private' && message.sender) {
+                    const senderElement = document.createElement('div');
+                    senderElement.className = 'sender';
+                    
+                    // קבל נתוני משתתף
+                    const participant = participants.get(message.senderId);
+                    if (participant) {
+                        senderElement.style.color = participant.color;
+                    }
+                    
+                    senderElement.textContent = message.sender;
+                    bubble.appendChild(senderElement);
+                }
+                
+                // הוספת תגובה למסר קודם אם יש
+                if (message.reply_to) {
+                    const replyElement = document.createElement('div');
+                    replyElement.className = 'reply-to';
+                    
+                    // חיפוש ההודעה המקורית
+                    const originalMessage = chatData.messages.find(msg => msg.id === message.reply_to);
+                    
+                    if (originalMessage) {
+                        const replySender = originalMessage.sender || 'Unknown';
+                        const replyText = originalMessage.text || 
+                                           (originalMessage.mediaType ? `[${originalMessage.mediaType}]` : '');
+                        
+                        replyElement.innerHTML = `
+                            <div class="reply-sender">${replySender}</div>
+                            <div class="reply-content">${replyText}</div>
+                        `;
+                    } else {
+                        replyElement.textContent = 'בתגובה להודעה';
+                    }
+                    
+                    bubble.appendChild(replyElement);
+                }
+                
+                // הוספת מצב הועבר אם יש
+                if (message.forwarded && message.forwarded_from) {
+                    const forwardedElement = document.createElement('div');
+                    forwardedElement.className = 'message-note message-forwarded';
+                    forwardedElement.innerHTML = `<i class="fas fa-share"></i> הועבר מ-${message.forwarded_from}`;
+                    bubble.appendChild(forwardedElement);
+                }
+                
+                // טיפול בסוגי מדיה שונים
+                if (message.mediaType) {
+                    const mediaElement = createMediaElement(message);
+                    if (mediaElement) {
+                        bubble.appendChild(mediaElement);
+                    }
+                }
+                
+                // תוכן הודעת טקסט
+                if (message.text) {
+                    const contentElement = document.createElement('div');
+                    contentElement.className = 'message-content';
+                    contentElement.textContent = message.text;
+                    bubble.appendChild(contentElement);
+                }
+                
+                // הוספת תגובות (reactions) אם יש
+                if (message.reactions && message.reactions.length > 0) {
+                    const reactionsElement = document.createElement('div');
+                    reactionsElement.className = 'reactions';
+                    
+                    message.reactions.forEach(reaction => {
+                        // חלק מהפורמטים משתמשים ב-emoji ישירות, וחלק משתמשים באובייקט
+                        const emoji = reaction.emoji || (reaction.reaction ? reaction.reaction : '👍');
+                        const count = reaction.count || 1;
+                        
+                        reactionsElement.innerHTML += `
+                            <div class="reaction">
+                                <span class="emoji">${emoji}</span>
+                                <span class="count">${count}</span>
+                            </div>
+                        `;
+                    });
+                    
+                    bubble.appendChild(reactionsElement);
+                }
+                
+                // הוסף הערה אם ההודעה נערכה
+                if (message.edited) {
+                    const noteElement = document.createElement('div');
+                    noteElement.className = 'message-note message-edited';
+                    noteElement.innerHTML = `<i class="fas fa-edit"></i> נערך`;
+                    bubble.appendChild(noteElement);
+                }
+                
+                // מידע על צפיות (לערוצים)
+                if (message.views && message.views > 0 && (chatData.type === 'channel' || chatData.type === 'supergroup')) {
+                    const viewsElement = document.createElement('span');
+                    viewsElement.className = 'message-views';
+                    viewsElement.innerHTML = `<i class="fas fa-eye"></i> ${message.views}`;
+                    bubble.appendChild(viewsElement);
+                }
+                
+                // שעת ההודעה
+                const timeElement = document.createElement('div');
+                timeElement.className = 'message-time';
+                timeElement.textContent = message.time;
+                bubble.appendChild(timeElement);
+                
+                // הוספה למיכל ההודעות
+                messageElement.appendChild(bubble);
+                messagesContainer.appendChild(messageElement);
+            });
+            
+            // גלילה לתחתית השיחה
+            chatBody.scrollTop = chatBody.scrollHeight;
+            
+            // הפעל מאזיני אירועים לתמונות
+            setupImageEventListeners();
+                onChatLoaded();
+        }
+        
+        // יצירת אלמנט מדיה בהתאם לסוג
+        function createMediaElement(message) {
+    if (!message.mediaType) return null;
+    
+    const mediaContainer = document.createElement('div');
+    
+    // טעינת ספריות חיצוניות אם לא נטענו כבר
+    loadExternalLibraries();
+    
+    // מצא קובץ מדיה מתאים
+    const mediaFile = findMediaFile(message);
+    
+    // יצירת מזהה ייחודי לאלמנט
+    const elementId = 'media_' + message.id + '_' + Math.random().toString(36).substr(2, 5);
+    mediaContainer.id = elementId;
+    
+    switch (message.mediaType) {
+        case 'photo':
+            mediaContainer.className = 'attachment';
+            if (mediaFile) {
+                // בדיקה אם מדובר בקובץ HEIC שדורש טיפול מיוחד
+                if (message.is_heic || (mediaFile.name && mediaFile.name.toLowerCase().endsWith('.heic'))) {
+                    // יצירת קישור להורדה
+                    const downloadInfo = createDownloadableFile(mediaFile, mediaFile.name || 'image.heic');
+                    
+                    // לבדוק אם יש תמונה ממוזערת
+                    if (message.thumbnail && mediaStore.has(message.thumbnail)) {
+                        const thumbFile = mediaStore.get(message.thumbnail);
+                        mediaContainer.innerHTML = `
+                            <div class="heic-container">
+                                <img src="${thumbFile.data}" alt="תצוגה מקדימה (HEIC)" class="attachment-image">
+                                <div class="heic-info">קובץ HEIC - לא נתמך ישירות בדפדפן</div>
+                                <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-link">
+                                    <i class="fas fa-download"></i> הורד את התמונה המקורית
+                                </a>
+                            </div>
+                        `;
+                    } else {
+                        mediaContainer.innerHTML = `
+                            <div class="attachment-file">
+                                <i class="fas fa-image"></i>
+                                <span>תמונת HEIC (${mediaFile.name || 'תמונה'})</span>
+                                <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-link">
+                                    <i class="fas fa-download"></i> הורד את התמונה המקורית
+                                </a>
+                            </div>
+                        `;
+                    }
+                } else {
+                    // תמונה רגילה שהדפדפן יכול להציג
+                    mediaContainer.innerHTML = `
+                        <img src="${mediaFile.data}" alt="תמונה" 
+                             data-path="${encodeURIComponent(mediaFile.path || '')}" 
+                             class="attachment-image">
+                    `;
+                }
+            } else {
+                // אם אין קובץ, אבל יש תמונה ממוזערת, נציג את הממוזערת
+                if (message.thumbnail && mediaStore.has(message.thumbnail)) {
+                    const thumbFile = mediaStore.get(message.thumbnail);
+                    mediaContainer.innerHTML = `
+                        <img src="${thumbFile.data}" alt="תצוגה מקדימה" 
+                            class="attachment-image">
+                        <div class="preview-note">תצוגה מקדימה בלבד</div>
+                    `;
+                } else {
+                    mediaContainer.innerHTML = `
+                        <div class="attachment-file">
+                            <i class="fas fa-image"></i>
+                            <span>תמונה (${message.file_name || 'הקובץ לא נמצא'})</span>
+                        </div>
+                    `;
+                }
+            }
+            break;
+            
+        case 'video':
+            mediaContainer.className = 'video-container';
+            if (mediaFile) {
+                // בדיקה אם זה קובץ MOV
+                if (message.file_name && message.file_name.toLowerCase().endsWith('.mov')) {
+                    // נשתמש בפונקציה מיוחדת לטיפול בקבצי MOV
+                    setTimeout(() => handleMovVideo(mediaFile, elementId), 0);
+                    mediaContainer.innerHTML = `<div class="loading-media">טוען וידאו...</div>`;
+                } else {
+                    // וידאו רגיל שהדפדפן יכול להציג
+                    let durationText = '';
+                    if (message.mediaDuration) {
+                        durationText = `<div class="video-duration">${formatDuration(message.mediaDuration)}</div>`;
+                    }
+                    
+                    mediaContainer.innerHTML = `
+                        <video controls width="100%">
+                            <source src="${mediaFile.data}" type="${mediaFile.type || 'video/mp4'}">
+                            הדפדפן שלך לא תומך בהצגת וידאו
+                        </video>
+                        ${durationText}
+                    `;
+                }
+            } else {
+                // אם אין קובץ מלא, בדוק אם יש תמונה ממוזערת
+                if (message.thumbnail && mediaStore.has(message.thumbnail)) {
+                    const thumbFile = mediaStore.get(message.thumbnail);
+                    mediaContainer.innerHTML = `
+                        <div class="video-thumbnail">
+                            <img src="${thumbFile.data}" alt="תצוגה מקדימה של וידאו" class="attachment-image">
+                            <div class="video-play-icon"><i class="fas fa-play-circle"></i></div>
+                            <div class="video-info">לא ניתן להציג את הווידאו: ${message.file_name || message.file || 'קובץ וידאו'}</div>
+                        </div>
+                    `;
+                } else {
+                    mediaContainer.innerHTML = `
+                        <div class="attachment-file">
+                            <i class="fas fa-video"></i>
+                            <span>וידאו (${message.file_name || message.file || 'הקובץ לא נמצא'})</span>
+                        </div>
+                    `;
+                }
+            }
+            break;
+            
+        case 'sticker':
+            mediaContainer.className = 'sticker';
+            if (mediaFile) {
+                // בדיקה אם מדובר בסטיקר מונפש (TGS)
+                if (message.is_animated_sticker || (mediaFile.name && mediaFile.name.toLowerCase().endsWith('.tgs'))) {
+                    // נשתמש בפונקציה מיוחדת לטיפול בסטיקרים מונפשים
+                    setTimeout(() => renderTgsSticker(mediaFile, elementId), 0);
+                    mediaContainer.innerHTML = `<div class="loading-media">טוען סטיקר...</div>`;
+                } else {
+                    // סטיקר רגיל
+                    mediaContainer.innerHTML = `
+                        <img src="${mediaFile.data}" alt="סטיקר" 
+                             data-path="${encodeURIComponent(mediaFile.path || '')}" 
+                             class="attachment-image">
+                    `;
+                }
+            } else {
+                // בדוק אם יש תמונה ממוזערת
+                if (message.thumbnail && mediaStore.has(message.thumbnail)) {
+                    const thumbFile = mediaStore.get(message.thumbnail);
+                    mediaContainer.innerHTML = `
+                        <img src="${thumbFile.data}" alt="סטיקר (תצוגה מקדימה)" class="attachment-image">
+                    `;
+                } else {
+                    const emoji = message.sticker_emoji || '😊';
+                    mediaContainer.innerHTML = `
+                        <div class="sticker-placeholder">
+                            <span class="sticker-emoji">${emoji}</span>
+                            <span>סטיקר</span>
+                        </div>
+                    `;
+                }
+            }
+            break;
+            
+        case 'voice':
+            mediaContainer.className = 'voice-message';
+            if (mediaFile) {
+                const duration = message.mediaDuration ? formatDuration(message.mediaDuration) : '--:--';
+                mediaContainer.innerHTML = `
+                    <i class="fas fa-microphone"></i>
+                    <audio controls>
+                        <source src="${mediaFile.data}" type="${mediaFile.type || 'audio/ogg'}">
+                        הדפדפן שלך לא תומך בהצגת אודיו
+                    </audio>
+                    <span class="voice-message-duration">${duration}</span>
+                `;
+            } else {
+                mediaContainer.innerHTML = `
+                    <i class="fas fa-microphone"></i>
+                    <span>הודעה קולית (${message.file_name || message.file || 'הקובץ לא נמצא'})</span>
+                `;
+            }
+            break;
+            
+        case 'document':
+            mediaContainer.className = 'document-container';
+            if (mediaFile) {
+                // נשתמש בפונקציה לטיפול בקבצים כלליים עם אפשרות הורדה
+                setTimeout(() => handleGenericFile(mediaFile, elementId), 0);
+                mediaContainer.innerHTML = `<div class="loading-media">טוען קובץ...</div>`;
+            } else {
+                let fileName = message.file_name || '';
+                mediaContainer.innerHTML = `
+                    <div class="document-icon">
+                        <i class="fas fa-file"></i>
+                    </div>
+                    <div class="document-info">
+                        <div class="document-title">${fileName || 'קובץ'}</div>
+                        <div class="document-status">(הקובץ לא נמצא)</div>
+                    </div>
+                `;
+            }
+            break;
+            
+        case 'video_note':
+            mediaContainer.className = 'video-note';
+            if (mediaFile) {
+                mediaContainer.innerHTML = `
+                    <video controls autoplay loop>
+                        <source src="${mediaFile.data}" type="${mediaFile.type || 'video/mp4'}">
+                        הדפדפן שלך לא תומך בהצגת וידאו
+                    </video>
+                `;
+            } else {
+                // בדוק אם יש תמונה ממוזערת
+                if (message.thumbnail && mediaStore.has(message.thumbnail)) {
+                    const thumbFile = mediaStore.get(message.thumbnail);
+                    mediaContainer.innerHTML = `
+                        <div class="video-note-thumbnail" style="border-radius: 50%; overflow: hidden;">
+                            <img src="${thumbFile.data}" alt="וידאו עגול (תצוגה מקדימה)" style="width: 150px; height: 150px; object-fit: cover;">
+                        </div>
+                    `;
+                } else {
+                    mediaContainer.innerHTML = `
+                        <div class="attachment-file">
+                            <i class="fas fa-circle"></i>
+                            <span>הודעת וידאו עגולה (${message.file_name || message.file || 'הקובץ לא נמצא'})</span>
+                        </div>
+                    `;
+                }
+            }
+            break;
+            
+        case 'contact':
+            mediaContainer.className = 'contact-preview';
+            if (message.contact) {
+                const contact = message.contact;
+                const fullName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
+                mediaContainer.innerHTML = `
+                    <div class="contact-info">
+                        <div class="contact-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="contact-details">
+                            <div class="contact-name">${fullName || 'איש קשר'}</div>
+                            ${contact.phone_number ? `<div class="contact-phone">${contact.phone_number}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            } else {
+                mediaContainer.innerHTML = `
+                    <div class="contact-info">
+                        <i class="fas fa-user"></i>
+                        <span>איש קשר</span>
+                    </div>
+                `;
+            }
+            break;
+            
+        case 'location':
+            mediaContainer.className = 'location-preview';
+            if (message.location) {
+                const location = message.location;
+                const mapUrl = `https://www.openstreetmap.org/?mlat=${location.latitude}&mlon=${location.longitude}&zoom=15`;
+                
+                mediaContainer.innerHTML = `
+                    <div class="location-box">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <div class="location-info">
+                            <div>מיקום:</div>
+                            <div class="location-coordinates">${location.latitude}, ${location.longitude}</div>
+                            <a href="${mapUrl}" target="_blank" class="location-link">פתח במפה</a>
+                        </div>
+                    </div>
+                `;
+            } else {
+                mediaContainer.innerHTML = `
+                    <div class="location-box">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>מיקום</span>
+                    </div>
+                `;
+            }
+            break;
+            
+        case 'audio':
+            mediaContainer.className = 'audio-attachment';
+            if (mediaFile) {
+                mediaContainer.innerHTML = `
+                    <audio controls>
+                        <source src="${mediaFile.data}" type="${mediaFile.type || 'audio/mp3'}">
+                        הדפדפן שלך לא תומך בהצגת אודיו
+                    </audio>
+                `;
+            } else {
+                mediaContainer.innerHTML = `
+                    <div class="attachment-file">
+                        <i class="fas fa-music"></i>
+                        <span>קובץ אודיו (${message.file_name || message.file || 'הקובץ לא נמצא'})</span>
+                    </div>
+                `;
+            }
+            break;
+            
+        case 'animation':
+            mediaContainer.className = 'attachment';
+            if (mediaFile) {
+                if (mediaFile.type && mediaFile.type.includes('image/gif')) {
+                    mediaContainer.innerHTML = `
+                        <img src="${mediaFile.data}" alt="אנימציה" 
+                             data-path="${encodeURIComponent(mediaFile.path || '')}" 
+                             class="attachment-image">
+                    `;
+                } else {
+                    mediaContainer.innerHTML = `
+                        <video autoplay loop muted width="100%">
+                            <source src="${mediaFile.data}" type="${mediaFile.type || 'video/mp4'}">
+                            הדפדפן שלך לא תומך בהצגת אנימציה
+                        </video>
+                    `;
+                }
+            } else {
+                mediaContainer.innerHTML = `
+                    <div class="attachment-file">
+                        <i class="fas fa-film"></i>
+                        <span>אנימציה (${message.file_name || message.file || 'הקובץ לא נמצא'})</span>
+                    </div>
+                `;
+            }
+            break;
+            
+        case 'poll':
+            mediaContainer.className = 'poll-container';
+            let pollOptions = '';
+            
+            if (message.poll && message.poll.options) {
+                message.poll.options.forEach(option => {
+                    const percentage = message.poll.total_voters > 0 ? 
+                        Math.round((option.voters / message.poll.total_voters) * 100) : 0;
+                    
+                    pollOptions += `
+                        <div class="poll-option">
+                            <div class="poll-option-text">${option.text}</div>
+                            <div class="poll-option-votes">${option.voters} (${percentage}%)</div>
+                            <div class="poll-option-bar">
+                                <div class="poll-option-progress" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            mediaContainer.innerHTML = `
+                <div class="poll-question">${message.poll ? message.poll.question : 'סקר'}</div>
+                ${pollOptions}
+                <div class="poll-total">${message.poll ? `סה"כ הצבעות: ${message.poll.total_voters}` : ''}</div>
+            `;
+            break;
+            
+        default:
+            return null;
+    }
+    
+    return mediaContainer;
+}
+
+        // פורמט גודל קובץ
+        function formatFileSize(sizeInBytes) {
+            if (!sizeInBytes || isNaN(sizeInBytes)) return '';
+            
+            const kb = sizeInBytes / 1024;
+            if (kb < 1024) {
+                return Math.round(kb) + ' KB';
+            }
+            
+            const mb = kb / 1024;
+            if (mb < 1024) {
+                return mb.toFixed(1) + ' MB';
+            }
+            
+            const gb = mb / 1024;
+            return gb.toFixed(2) + ' GB';
+        }
+        
+        // חיפוש קובץ מדיה במאגר על סמך הודעה
+        function findMediaFile(message) {
+    if (!message || !message.mediaType) return null;
+    
+    // 1. First try direct file path matching if available in the message
+    if (message.photo) {
+        const photoPath = message.photo;
+        for (const [key, value] of mediaStore.entries()) {
+            if (value.path === photoPath || key === getFileNameFromPath(photoPath)) {
+                return value;
+            }
+        }
+    }
+    
+    if (message.file) {
+        const filePath = message.file;
+        for (const [key, value] of mediaStore.entries()) {
+            if (value.path === filePath || key === getFileNameFromPath(filePath)) {
+                return value;
+            }
+        }
+    }
+    
+    // 2. Try finding by mediaFileId (if available)
+    if (message.mediaFileId) {
+        for (const [key, value] of mediaStore.entries()) {
+            if (key === message.mediaFileId || key.includes(message.mediaFileId)) {
+                return value;
+            }
+        }
+    }
+    
+    // 3. For specific file types, try pattern matching
+    const fileName = message.file_name || '';
+    if (fileName) {
+        for (const [key, value] of mediaStore.entries()) {
+            if (key === fileName || getFileNameFromPath(value.path) === fileName) {
+                return value;
+            }
+        }
+    }
+    
+    // 4. Try file type directory matching
+    const mediaDirectories = {
+        'photo': ['photos/', 'photo_'],
+        'video': ['video_files/', 'videos/', 'video_'],
+        'voice': ['voice_messages/', 'voice_'],
+        'video_note': ['round_video_messages/', 'round_video_'],
+        'sticker': ['stickers/', 'sticker'],
+        'animation': ['animations/', 'animation_'],
+        'document': ['files/', 'document_']
+    };
+    
+    const filePatterns = mediaDirectories[message.mediaType] || [];
+    for (const pattern of filePatterns) {
+        for (const [key, value] of mediaStore.entries()) {
+            const path = value.path || key;
+            if (path.includes(pattern)) {
+                if (fileName && path.includes(fileName)) {
+                    return value;
+                }
+                
+                // For files with specific formats
+                if (message.mediaType === 'photo' && value.type.includes('image')) {
+                    return value;
+                }
+                if (message.mediaType === 'video' && (value.type.includes('video') || path.endsWith('.MOV'))) {
+                    return value;
+                }
+                if (message.mediaType === 'voice' && (value.type.includes('audio') || path.endsWith('.ogg'))) {
+                    return value;
+                }
+                if (message.mediaType === 'video_note' && path.includes('round_video')) {
+                    return value;
+                }
+            }
+        }
+    }
+    
+    // 5. Check based on file extension for common formats
+    const extensionMap = {
+        'photo': ['.jpg', '.jpeg', '.png', '.heic', '.HEIC'],
+        'video': ['.mp4', '.mov', '.MOV', '.avi'],
+        'voice': ['.ogg', '.mp3', '.wav'],
+        'video_note': ['.mp4', '.mov'],
+        'sticker': ['.webp', '.tgs'],
+        'animation': ['.gif', '.mp4'],
+        'document': ['.pdf', '.doc', '.docx', '.txt']
+    };
+    
+    const extensions = extensionMap[message.mediaType] || [];
+    for (const ext of extensions) {
+        for (const [key, value] of mediaStore.entries()) {
+            const path = value.path || key;
+            if (path.toLowerCase().endsWith(ext.toLowerCase())) {
+                return value;
+            }
+        }
+    }
+    
+    // 6. Last resort - just try to match by timestamp if available
+    if (message.timestamp) {
+        const date = new Date(message.timestamp);
+        const formattedDate = date.toISOString().split('T')[0].replace(/-/g, '');
+        
+        for (const [key, value] of mediaStore.entries()) {
+            const path = value.path || key;
+            if (path.includes(formattedDate)) {
+                // Match media type with file type
+                if ((message.mediaType === 'photo' && value.type.includes('image')) ||
+                    (message.mediaType === 'video' && (value.type.includes('video') || path.endsWith('.MOV'))) ||
+                    (message.mediaType === 'voice' && (value.type.includes('audio') || path.endsWith('.ogg'))) ||
+                    (message.mediaType === 'video_note' && path.includes('round_video'))) {
+                    return value;
+                }
+            }
+        }
+
+            // 1. בדיקה מיוחדת עבור תמונות ממוזערות (thumbnails)
+        if (message.thumbnail) {
+            for (const [key, value] of mediaStore.entries()) {
+                if (key === message.thumbnail || value.path === message.thumbnail) {
+                    return value;
+                }
+            }
+        }
+
+        // 2. בדיקה מיוחדת עבור סטיקרים מסוג TGS
+        if (message.mediaType === 'sticker' && message.file_name && message.file_name.endsWith('.tgs')) {
+            // בדוק אם יש תמונה ממוזערת
+            if (message.thumbnail) {
+                for (const [key, value] of mediaStore.entries()) {
+                    if (key === message.thumbnail || value.path === message.thumbnail) {
+                        return value;
+                    }
+                }
+            }
+            
+            // אם אין תמונה ממוזערת, חפש את קובץ ה-TGS עצמו
+            for (const [key, value] of mediaStore.entries()) {
+                if (key.endsWith('.tgs') || (value.path && value.path.endsWith('.tgs'))) {
+                    return value;
+                }
+            }
+        }
+
+        // 3. בדיקות ספציפיות לקבצים בעייתיים
+        const problematicFiles = [
+            "IMG_2435.MOV",  // הסרטון הראשון
+            "AnimatedSticker.tgs",  // סטיקר מונפש
+            "IMG_6855.HEIC"  // תמונת HEIC
+        ];
+
+        if (message.file_name && problematicFiles.includes(message.file_name)) {
+            // חיפוש מדויק לפי שם קובץ
+            for (const [key, value] of mediaStore.entries()) {
+                if (key === message.file_name || 
+                    (value.name && value.name === message.file_name) ||
+                    (value.path && value.path.includes(message.file_name))) {
+                    return value;
+                }
+            }
+            
+            // חיפוש לפי נתיב מלא
+            if (message.file) {
+                for (const [key, value] of mediaStore.entries()) {
+                    if (key === message.file || value.path === message.file) {
+                        return value;
+                    }
+                }
+            }
+        }
+
+        // 4. כאשר מדובר בקובץ וידאו, נסה לבדוק גם את הסיומות השונות
+        if (message.mediaType === 'video' && message.file_name) {
+            const fileNameLower = message.file_name.toLowerCase();
+            if (fileNameLower.endsWith('.mov')) {
+                for (const [key, value] of mediaStore.entries()) {
+                    const keyLower = key.toLowerCase();
+                    const pathLower = value.path ? value.path.toLowerCase() : '';
+                    
+                    if (keyLower.endsWith('.mov') || pathLower.endsWith('.mov')) {
+                        return value;
+                    }
+                }
+            }
+        }
+            }
+            
+            return null;
+        }
+
+        // פונקציה לקבלת אייקון מתאים לסוג קובץ
+        function getFileIcon(fileTypeOrName) {
+            const lowerType = typeof fileTypeOrName === 'string' ? fileTypeOrName.toLowerCase() : '';
+            
+            if (lowerType.includes('image') || lowerType.endsWith('.jpg') || lowerType.endsWith('.png') || lowerType.endsWith('.jpeg')) {
+                return 'fas fa-file-image';
+            } else if (lowerType.includes('video') || lowerType.endsWith('.mp4') || lowerType.endsWith('.mov')) {
+                return 'fas fa-file-video';
+            } else if (lowerType.includes('audio') || lowerType.endsWith('.mp3') || lowerType.endsWith('.opus') || lowerType.endsWith('.ogg')) {
+                return 'fas fa-file-audio';
+            } else if (lowerType.includes('pdf') || lowerType.endsWith('.pdf')) {
+                return 'fas fa-file-pdf';
+            } else if (lowerType.includes('word') || lowerType.endsWith('.doc') || lowerType.endsWith('.docx')) {
+                return 'fas fa-file-word';
+            } else if (lowerType.includes('excel') || lowerType.endsWith('.xls') || lowerType.endsWith('.xlsx')) {
+                return 'fas fa-file-excel';
+            } else if (lowerType.includes('zip') || lowerType.endsWith('.zip') || lowerType.endsWith('.tgz') || lowerType.endsWith('.rar')) {
+                return 'fas fa-file-archive';
+            } else if (lowerType.endsWith('.txt')) {
+                return 'fas fa-file-alt';
+            } else {
+                return 'fas fa-file';
+            }
+        }
+
+        // ===================================================
+        // =================== פונקציות עזר ==================
+        // ===================================================
+
+        // מאזיני אירועים לתמונות
+        function setupImageEventListeners() {
+            // הוסר מאזינים קודמים אם היו
+            const oldImages = document.querySelectorAll('.attachment-image');
+            oldImages.forEach(img => {
+                img.removeEventListener('click', imageClickHandler);
+            });
+            
+            // הוסף מאזין קליק לכל התמונות במסמך
+            document.addEventListener('click', imageClickHandler);
+        }
+
+        // טיפול באירוע לחיצה על תמונה
+        function imageClickHandler(e) {
+            const target = e.target;
+            
+            // בדוק אם הקליק היה על תמונת מצורף
+            if (target.classList.contains('attachment-image')) {
+                e.preventDefault();
+                
+                // קבל את הנתיב ממאפיין data
+                const path = target.getAttribute('data-path') ? decodeURIComponent(target.getAttribute('data-path')) : '';
+                
+                // הצג את התמונה במודל
+                showImageInModal(target.src, path);
+            }
+        }
+
+        // הצגת תמונה במודל
+        function showImageInModal(imageUrl, path) {
+            const modal = document.getElementById('image-modal');
+            const modalImg = document.getElementById('modal-image');
+            
+            // וודא שה-URL תקין
+            if (!imageUrl) {
+                console.error('אין URL תקין לתמונה');
+                return;
+            }
+            
+            modalImg.src = imageUrl;
+            modal.style.display = 'flex';
+        }
+
+        // סגירת מודל תמונה
+        function closeModal() {
+            document.getElementById('image-modal').style.display = 'none';
+        }
+
+        // ניקוי הכל
+        function clearAll() {
+            chatData = {
+                name: '',
+                type: '',
+                messages: [],
+                about: ''
+            };
+            
+            mediaStore.clear();
+            participants.clear();
+            
+            document.getElementById('chat-container').innerHTML = `
+                <div class="no-chat">
+                    <i class="fas fa-paper-plane"></i>
+                    <p>אין שיחה להצגה</p>
+                    <p>העלה קובץ ZIP של שיחת טלגרם כדי להתחיל</p>
+                </div>
+            `;
+            
+            // ניקוי שדות הקובץ
+            document.getElementById('json-file').value = '';
+            document.getElementById('zip-file').value = '';
+            
+            showStatusMessage('הנתונים נוקו בהצלחה', 'success');
+        }
+
+        // הצגת לוח טעינה
+        function showLoader(message) {
+            const loader = document.getElementById('loader');
+            document.getElementById('loader-text').textContent = message || 'טוען...';
+            loader.style.display = 'flex';
+        }
+
+        // עדכון טקסט בלוח טעינה
+        function updateLoaderText(message) {
+            document.getElementById('loader-text').textContent = message;
+        }
+
+        // הסתרת לוח טעינה
+        function hideLoader() {
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        // הצגת הודעת סטטוס
+        function showStatusMessage(message, type = 'info') {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = message;
+            statusElement.className = type;
+            statusElement.style.display = 'block';
+            
+            setTimeout(() => {
+                statusElement.style.display = 'none';
+            }, 3000);
+        }
+
+        // ===================================================
+        // =================== ייצוא שיחה ====================
+        // ===================================================
+
+        // פונקציה מאוחדת לייצוא השיחה ל-HTML
+        function exportChat(format) {
+            if (chatData.messages.length === 0) {
+                showStatusMessage('אין שיחה להצגה. העלה קובץ שיחה תחילה', 'error');
+                return;
+            }
+            
+            exportToHtml();
+        }
+
+        // פונקציה להמרת data URLs ל-URLs בטוחים יותר
+        function createSafeMediaUrl(mediaData, mediaType) {
+            try {
+                // המר data URL לבלוב
+                if (mediaData.startsWith('data:')) {
+                    // חלץ את הנתונים הבינאריים מה-data URL
+                    const base64Data = mediaData.split(',')[1];
+                    const binaryData = atob(base64Data);
+                    
+                    // המר לבלוב
+                    const uint8Array = new Uint8Array(binaryData.length);
+                    for (let i = 0; i < binaryData.length; i++) {
+                        uint8Array[i] = binaryData.charCodeAt(i);
+                    }
+                    
+                    const blob = new Blob([uint8Array], { type: mediaType });
+                    return URL.createObjectURL(blob);
+                }
+                
+                // החזר את ה-URL המקורי אם הוא לא data URL
+                return mediaData;
+            } catch (error) {
+                console.error('שגיאה ביצירת URL בטוח למדיה:', error);
+                return mediaData; // החזר את ה-URL המקורי במקרה של שגיאה
+            }
+        }
+
+        // ייצוא ל-HTML
+        function exportToHtml() {
+            showLoader('מייצא ל-HTML...');
+            
+            // יצירת HTML מסודר ללא חריגות תגיות
+            const element = document.getElementById('chat-container');
+            const style = document.querySelector('style').innerHTML;
+            
+            // המר את התמונות לבלוב URLs בעת הייצוא HTML
+            const tempContainer = element.cloneNode(true);
+            
+            // טיפול בתמונות מצורפות
+            const images = tempContainer.querySelectorAll('.attachment img, .sticker img');
+            images.forEach(img => {
+                if (img.hasAttribute('data-path')) {
+                    const path = decodeURIComponent(img.getAttribute('data-path'));
+                    img.removeAttribute('data-path');
+                    img.setAttribute('onclick', 'openImageModal(this.src)');
+                }
+            });
+            
+            // טיפול באלמנטים של וידאו
+            const videos = tempContainer.querySelectorAll('video');
+            videos.forEach(video => {
+                const source = video.querySelector('source');
+                if (source && source.src.startsWith('data:')) {
+                    const mediaType = source.type || 'video/mp4';
+                    source.src = createSafeMediaUrl(source.src, mediaType);
+                }
+            });
+            
+            // טיפול באלמנטים של אודיו
+            const audios = tempContainer.querySelectorAll('audio');
+            audios.forEach(audio => {
+                const source = audio.querySelector('source');
+                if (source && source.src.startsWith('data:')) {
+                    const mediaType = source.type || 'audio/ogg';
+                    source.src = createSafeMediaUrl(source.src, mediaType);
+                }
+            });
+            
+            // טיפול בתמונת פרופיל
+            const profileImage = tempContainer.querySelector('.avatar img');
+            if (profileImage && appSettings.profileImage) {
+                profileImage.src = appSettings.profileImage;
+            }
+            
+            // טיפול בתמונת רקע
+            const chatBody = tempContainer.querySelector('.chat-body');
+            if (chatBody && appSettings.backgroundImage) {
+                // הוסף סגנון ישירות לאלמנט (לא CSS)
+                chatBody.style.backgroundImage = `url(${appSettings.backgroundImage})`;
+            }
+            
+            // הוסף את כל קבצי המדיה כנכסים מקומיים בקובץ HTML
+            let mediaAssetsScript = '';
+            let mediaCounter = 0;
+            
+            for (const [filename, mediaFile] of mediaStore.entries()) {
+                mediaCounter++;
+                mediaAssetsScript += `
+                    mediaStore.set('${filename.replace(/'/g, "\\'")}', {
+                        data: '${mediaFile.data.replace(/'/g, "\\'")}',
+                        type: '${mediaFile.type}',
+                        name: '${filename.replace(/'/g, "\\'")}',
+                        path: '${(mediaFile.path || '').replace(/'/g, "\\'")}'
+                    });
+                `;
+                
+                // הגבל את גודל הסקריפט
+                if (mediaCounter % 50 === 0) {
+                    mediaAssetsScript += `
+                        console.log('טעינת מדיה: ${mediaCounter} קבצים');
+                    `;
+                }
+            }
+            
+            // הוסף מידע על משתתפים
+            let participantsScript = '';
+            for (const [id, participant] of participants.entries()) {
+                participantsScript += `
+                    participants.set('${id}', {
+                        id: '${id}',
+                        name: '${participant.name.replace(/'/g, "\\'")}',
+                        username: '${participant.username || ''}',
+                        color: '${participant.color}'
+                        ${participant.avatar ? `, avatar: '${participant.avatar.replace(/'/g, "\\'")}'` : ''}
+                    });
+                `;
+            }
+            
+            // הוסף רק את המידע על תמונת הפרופיל ורקע אם קיימים
+            let settingsScript = '';
+            if (appSettings.profileImage) {
+                settingsScript += `
+                    appSettings.profileImage = '${appSettings.profileImage.replace(/'/g, "\\'")}';
+                `;
+            }
+            if (appSettings.backgroundImage) {
+                settingsScript += `
+                    appSettings.backgroundImage = '${appSettings.backgroundImage.replace(/'/g, "\\'")}';
+                `;
+            }
+            
+            const htmlTemplate = `<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Chat - ${chatData.name}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>${style}</style>
+</head>
+<body style="background-color: #f0f2f5; margin: 0; padding: 20px;">
+    <div class="container" style="display: flex; justify-content: center;">
+        ${tempContainer.outerHTML}
+    </div>
+    
+    <div id="image-modal" class="modal">
+        <span class="modal-close">&times;</span>
+        <img class="modal-content" id="modal-image">
+    </div>
+
+    <script>
+    // מאגר מדיה להצגת תמונות במודל
+    const mediaStore = new Map();
+    ${mediaAssetsScript}
+    
+    // מידע על משתתפים
+    const participants = new Map();
+    ${participantsScript}
+    
+    // הגדרות מראה
+    const appSettings = {
+        profileImage: null,
+        backgroundImage: null
+    };
+    ${settingsScript}
+    
+    // פתיחת תמונה במודל
+    function openImageModal(src) {
+        const modal = document.getElementById('image-modal');
+        const modalImg = document.getElementById('modal-image');
+        modalImg.src = src;
+        modal.style.display = 'flex';
+    }
+    
+    // סגירת מודל
+    function closeModal() {
+        document.getElementById('image-modal').style.display = 'none';
+    }
+    
+    // מאזיני אירועים
+    document.querySelector('.modal-close').addEventListener('click', closeModal);
+    
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeModal();
+        }
+    });
+
+    // הוסף מאזיני אירועים לכל התמונות
+    document.querySelectorAll('.attachment img, .sticker img').forEach(img => {
+        img.addEventListener('click', function() {
+            openImageModal(this.src);
+        });
+    });
+</body>
+</html>`;
+            
+            // יצירת האובייקט להורדה
+            try {
+                const blob = new Blob([htmlTemplate], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `telegram-chat-${chatData.name.replace(/[^\w\s]/gi, '')}-${new Date().toISOString().slice(0, 10)}.html`;
+                document.body.appendChild(a);
+                a.click();
+                
+                // ניקוי
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    hideLoader();
+                    showStatusMessage('השיחה יוצאה ל-HTML בהצלחה', 'success');
+                }, 100);
+            } catch (error) {
+                console.error('Error exporting to HTML:', error);
+                hideLoader();
+                showStatusMessage('שגיאה בייצוא ל-HTML', 'error');
+            }
+        }
+
+        // פונקציה לאתחול הממשק ולטעינת ספריות
+    function initializeChatViewer() {
+        // טען ספריות חיצוניות אם נדרש
+        loadExternalLibraries();
+        
+        // הוסף אירוע ניקוי קישורים לפני סגירת החלון
+        window.addEventListener('beforeunload', function() {
+            cleanupDownloadLinks();
+        });
+        
+        // רענן את מראה השיחה
+        if (chatData && chatData.messages && chatData.messages.length > 0) {
+            updateChatView();
+        }
+        
+        console.log('מציג שיחות טלגרם אותחל בהצלחה');
+    }
+
+    // הפעל את האתחול כשהדף נטען
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeChatViewer();
+    });
+
+    // הוסף פונקציית מחזור חיים להרצה אחרי טעינת שיחה
+    function onChatLoaded() {
+        // נקה קישורי הורדה קודמים
+        cleanupDownloadLinks();
+        
+        // בדוק אם יש הודעות שדורשות טיפול מיוחד
+        if (chatData && chatData.messages) {
+            const problematicMessages = chatData.messages.filter(msg => 
+                (msg.mediaType === 'sticker' && msg.is_animated_sticker) ||
+                (msg.mediaType === 'video' && msg.file_name && msg.file_name.toLowerCase().endsWith('.mov')) ||
+                (msg.mediaType === 'document')
+            );
+            
+            if (problematicMessages.length > 0) {
+                console.log(`נמצאו ${problematicMessages.length} הודעות שדורשות טיפול מיוחד`);
+            }
+        }
+    }
+</script>
+</body>
+</html>
