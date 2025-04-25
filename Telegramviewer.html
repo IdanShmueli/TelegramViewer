@@ -935,6 +935,23 @@
             color: #666;
         }
 
+        /* תמיכה בסטיקרים מונפשים */
+        .lottie-container {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sticker-animation {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto;
+            margin-bottom: 5px;
+        }
+
         /* עיצוב לאיש קשר */
         .contact-preview {
             margin-bottom: 5px;
@@ -1136,6 +1153,63 @@
         /* העלם את Data URL ארוכים מהקונסול */
         .data-url {
             display: none;
+        }
+
+        /* סגנונות חדשים לתמיכה בקבצי מדיה מיוחדים */
+        .video-fallback {
+            background-color: #f0f0f0;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .video-fallback-icon {
+            font-size: 36px;
+            color: #5682a3;
+            margin-bottom: 10px;
+        }
+
+        .video-player {
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        /* תמיכה בסטיקרים מונפשים */
+        .sticker-animation-container {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto;
+            margin-bottom: 5px;
+            position: relative;
+        }
+
+        /* עיצוב לכפתור הפעלה של הסטיקר המונפש */
+        .sticker-play-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(86, 130, 163, 0.7);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            z-index: 5;
+        }
+
+        .sticker-thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
         }
     </style>
 </head>
@@ -1357,193 +1431,416 @@
         // ===================================================
         
         // פונקציה להוספת ספריות נדרשות
-function loadExternalLibraries() {
-    // טען את ספריית Lottie להצגת סטיקרים מסוג TGS
-    if (!window.lottie) {
-        const lottieScript = document.createElement('script');
-        lottieScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js';
-        document.head.appendChild(lottieScript);
-        console.log('טעינת ספריית Lottie להצגת סטיקרים');
-    }
-}
+        function loadExternalLibraries() {
+            return new Promise((resolve) => {
+                let loadCount = 0;
+                const requiredLibs = 2; // מספר הספריות שצריך לטעון
 
-// פונקציה ליצירת פורמט להורדה מתוך קובץ מדיה
-function createDownloadableFile(mediaFile, fileName) {
-    if (!mediaFile || !mediaFile.data) return null;
-    
-    // יצירת מזהה ייחודי
-    const uniqueId = 'download_' + Math.random().toString(36).substr(2, 9);
-    
-    // יצירת בלוב
-    let blob;
-    if (mediaFile.data.startsWith('data:')) {
-        // המרת data URL לבלוב
-        const arr = mediaFile.data.split(',');
-        const mime = arr[0].match(/:(.*?);/)[1];
-        const bstr = atob(arr[1]);
-        let n = bstr.length;
-        const u8arr = new Uint8Array(n);
-        while (n--) {
-            u8arr[n] = bstr.charCodeAt(n);
-        }
-        blob = new Blob([u8arr], { type: mime });
-    } else {
-        // אם זה כבר בלוב, השתמש בו ישירות
-        blob = mediaFile.data;
-    }
-    
-    // יצירת URL לבלוב
-    const url = URL.createObjectURL(blob);
-    
-    // שמירת הקישור במאגר לניקוי מאוחר יותר
-    if (!window.downloadLinks) window.downloadLinks = {};
-    window.downloadLinks[uniqueId] = url;
-    
-    return {
-        id: uniqueId,
-        url: url,
-        fileName: fileName || mediaFile.name || 'file',
-        size: blob.size,
-        type: mediaFile.type || blob.type
-    };
-}
-
-// פונקציה לניקוי הקישורים להורדה
-function cleanupDownloadLinks() {
-    if (window.downloadLinks) {
-        Object.values(window.downloadLinks).forEach(url => {
-            URL.revokeObjectURL(url);
-        });
-        window.downloadLinks = {};
-    }
-}
-
-// פונקציה להמרת סטיקר TGS לאנימציה מוצגת
-function renderTgsSticker(mediaFile, containerId) {
-    if (!mediaFile || !mediaFile.data) return false;
-    
-    // וודא שספריית Lottie נטענה
-    if (!window.lottie) {
-        setTimeout(() => renderTgsSticker(mediaFile, containerId), 500);
-        return false;
-    }
-    
-    try {
-        // המרת סטיקר TGS (שהוא JSON מדוחס) לפורמט JSON רגיל
-        const container = document.getElementById(containerId);
-        if (!container) return false;
-        
-        // צור קובץ זמני להורדה
-        const downloadInfo = createDownloadableFile(mediaFile, 'sticker.tgs');
-        
-        // הצג את הסטיקר כגיף (כאן נצטרך להשתמש בספריה חיצונית להמרה, אך בינתיים נציג רק את האייקון)
-        container.innerHTML = `
-            <div class="sticker-placeholder">
-                <span class="sticker-emoji">🎬</span>
-                <div class="sticker-info">סטיקר מונפש</div>
-                <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-link">
-                    <i class="fas fa-download"></i> הורד את הסטיקר המקורי
-                </a>
-            </div>
-        `;
-        
-        return true;
-    } catch (error) {
-        console.error('שגיאה בהמרת סטיקר TGS:', error);
-        return false;
-    }
-}
-
-// פונקציה לטיפול בקובץ MOV והמרתו למשהו שאפשר להציג
-function handleMovVideo(mediaFile, containerId) {
-    if (!mediaFile || !mediaFile.data) return false;
-    
-    try {
-        const container = document.getElementById(containerId);
-        if (!container) return false;
-        
-        // צור קובץ זמני להורדה
-        const downloadInfo = createDownloadableFile(mediaFile, mediaFile.name || 'video.mov');
-        
-        // בדוק אם הדפדפן כנראה יכול להציג קבצי MOV
-        const canPlayMov = navigator.mediaCapabilities && 
-              navigator.mediaCapabilities.decodingInfo &&
-              navigator.mediaCapabilities.decodingInfo({
-                type: 'file',
-                video: {
-                    contentType: 'video/quicktime'
+                // טען את ספריית Lottie להצגת סטיקרים מסוג TGS
+                if (!window.lottie) {
+                    const lottieScript = document.createElement('script');
+                    lottieScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js';
+                    lottieScript.onload = () => {
+                        console.log('ספריית Lottie נטענה בהצלחה');
+                        loadCount++;
+                        if (loadCount === requiredLibs) resolve();
+                    };
+                    document.head.appendChild(lottieScript);
+                } else {
+                    loadCount++;
                 }
-              }).then(result => result.supported).catch(() => false);
-        
-        if (canPlayMov) {
-            // נסה להציג את הווידאו ישירות
-            container.innerHTML = `
-                <video controls width="100%">
-                    <source src="${mediaFile.data}" type="video/quicktime">
-                    הדפדפן שלך לא תומך בהצגת וידאו
-                </video>
-                <div class="video-download">
-                    <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-link">
-                        <i class="fas fa-download"></i> הורד את הוידאו
-                    </a>
-                </div>
-            `;
-        } else {
-            // הצג תמונה ממוזערת אם קיימת, או אייקון, עם קישור להורדה
-            container.innerHTML = `
-                <div class="video-thumbnail">
-                    <i class="fas fa-film" style="font-size: 48px; color: #5682a3;"></i>
-                    <div class="video-info">קובץ וידאו (MOV) - לא ניתן להציג ישירות בדפדפן</div>
-                    <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-link">
-                        <i class="fas fa-download"></i> הורד את הוידאו
-                    </a>
-                </div>
-            `;
-        }
-        
-        return true;
-    } catch (error) {
-        console.error('שגיאה בטיפול בקובץ MOV:', error);
-        return false;
-    }
-}
 
-// פונקציה לטיפול בכל קובץ עם הוספת אפשרות הורדה
-function handleGenericFile(mediaFile, containerId) {
-    if (!mediaFile || !mediaFile.data) return false;
-    
-    try {
-        const container = document.getElementById(containerId);
-        if (!container) return false;
-        
-        // צור קובץ זמני להורדה
-        const downloadInfo = createDownloadableFile(mediaFile, mediaFile.name);
-        
-        // להציג אייקון מתאים לסוג הקובץ
-        const fileIcon = getFileIcon(mediaFile.name, mediaFile.type);
-        const fileSize = formatFileSize(downloadInfo.size);
-        
-        container.innerHTML = `
-            <div class="file-download-container">
-                <div class="file-icon">
-                    <i class="${fileIcon}"></i>
-                </div>
-                <div class="file-info">
-                    <div class="file-name">${mediaFile.name || 'קובץ'}</div>
-                    <div class="file-size">${fileSize}</div>
-                </div>
-                <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-button">
-                    <i class="fas fa-download"></i>
-                </a>
-            </div>
-        `;
-        
-        return true;
-    } catch (error) {
-        console.error('שגיאה בטיפול בקובץ:', error);
-        return false;
-    }
-}
+                // טען את ספריית pako לפתיחת קבצים דחוסים (נדרש לסטיקרים TGS)
+                if (!window.pako) {
+                    const pakoScript = document.createElement('script');
+                    pakoScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js';
+                    pakoScript.onload = () => {
+                        console.log('ספריית Pako נטענה בהצלחה');
+                        loadCount++;
+                        if (loadCount === requiredLibs) resolve();
+                    };
+                    document.head.appendChild(pakoScript);
+                } else {
+                    loadCount++;
+                }
+
+                // אם כל הספריות כבר נטענו
+                if (loadCount === requiredLibs) {
+                    resolve();
+                }
+            });
+        }
+
+        // פונקציה ליצירת פורמט להורדה מתוך קובץ מדיה
+        function createDownloadableFile(mediaFile, fileName) {
+            if (!mediaFile || !mediaFile.data) return null;
+            
+            // יצירת מזהה ייחודי
+            const uniqueId = 'download_' + Math.random().toString(36).substr(2, 9);
+            
+            // יצירת בלוב
+            let blob;
+            if (typeof mediaFile.data === 'string' && mediaFile.data.startsWith('data:')) {
+                // המרת data URL לבלוב
+                const arr = mediaFile.data.split(',');
+                const mime = arr[0].match(/:(.*?);/)[1];
+                const bstr = atob(arr[1]);
+                let n = bstr.length;
+                const u8arr = new Uint8Array(n);
+                while (n--) {
+                    u8arr[n] = bstr.charCodeAt(n);
+                }
+                blob = new Blob([u8arr], { type: mime });
+            } else if (mediaFile.data instanceof Blob) {
+                // אם זה כבר בלוב, השתמש בו ישירות
+                blob = mediaFile.data;
+            } else {
+                // אם זה לא פורמט מוכר, נסה להמיר לבלוב
+                try {
+                    blob = new Blob([mediaFile.data], { type: mediaFile.type || 'application/octet-stream' });
+                } catch (e) {
+                    console.error('שגיאה ביצירת בלוב מהמדיה:', e);
+                    return null;
+                }
+            }
+            
+            // יצירת URL לבלוב
+            const url = URL.createObjectURL(blob);
+            
+            // שמירת הקישור במאגר לניקוי מאוחר יותר
+            if (!window.downloadLinks) window.downloadLinks = {};
+            window.downloadLinks[uniqueId] = url;
+            
+            return {
+                id: uniqueId,
+                url: url,
+                fileName: fileName || mediaFile.name || 'file',
+                size: blob.size,
+                type: mediaFile.type || blob.type
+            };
+        }
+
+        // פונקציה לניקוי הקישורים להורדה
+        function cleanupDownloadLinks() {
+            if (window.downloadLinks) {
+                Object.values(window.downloadLinks).forEach(url => {
+                    URL.revokeObjectURL(url);
+                });
+                window.downloadLinks = {};
+            }
+        }
+
+        // פונקציה שמנסה להמיר קובץ TGS לאנימציה של Lottie
+        async function renderTgsSticker(mediaFile, containerId) {
+            if (!mediaFile || !mediaFile.data) return false;
+            
+            const container = document.getElementById(containerId);
+            if (!container) return false;
+            
+            try {
+                // וודא שהספריות הדרושות נטענו
+                await loadExternalLibraries();
+                
+                if (!window.lottie || !window.pako) {
+                    throw new Error("הספריות הדרושות לא נטענו");
+                }
+                
+                // צור קובץ זמני להורדה
+                const downloadInfo = createDownloadableFile(mediaFile, mediaFile.name || 'sticker.tgs');
+                
+                // יצירת מזהה ייחודי לאנימציה
+                const animationId = 'lottie_' + Math.random().toString(36).substr(2, 9);
+                
+                // הוסף מכל אנימציה
+                container.innerHTML = `
+                    <div class="sticker-animation-container">
+                        <div id="${animationId}" class="lottie-container"></div>
+                        <div class="sticker-play-button">
+                            <i class="fas fa-play"></i>
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-link">
+                            <i class="fas fa-download"></i> הורד את הסטיקר
+                        </a>
+                    </div>
+                `;
+                
+                // מידע על הסטיקר
+                let tgsData;
+                
+                // המר את הנתונים ל־ArrayBuffer
+                if (typeof mediaFile.data === 'string' && mediaFile.data.startsWith('data:')) {
+                    // המר data URL ל־ArrayBuffer
+                    const base64 = mediaFile.data.split(',')[1];
+                    const binaryString = atob(base64);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    tgsData = bytes.buffer;
+                } else if (mediaFile.data instanceof ArrayBuffer) {
+                    tgsData = mediaFile.data;
+                } else {
+                    throw new Error("פורמט הנתונים של הסטיקר אינו נתמך");
+                }
+                
+                // נסה לפתוח את קובץ ה־TGS (שהוא בעצם קובץ JSON דחוס בפורמט gzip)
+                const inflatedData = window.pako.inflate(new Uint8Array(tgsData), { to: 'string' });
+                const lottieData = JSON.parse(inflatedData);
+                
+                // כפתור הפעלה
+                const playButton = container.querySelector('.sticker-play-button');
+                
+                // הפעל את האנימציה בלחיצה
+                playButton.addEventListener('click', function() {
+                    // הסר את כפתור ההפעלה
+                    playButton.style.display = 'none';
+                    
+                    // הפעל את האנימציה
+                    const animation = window.lottie.loadAnimation({
+                        container: document.getElementById(animationId),
+                        renderer: 'svg',
+                        loop: true,
+                        autoplay: true,
+                        animationData: lottieData
+                    });
+                });
+                
+                return true;
+            } catch (error) {
+                console.error('שגיאה בהצגת סטיקר TGS:', error);
+                
+                // הצג תמונה ממוזערת אם יש, אחרת הצג אייקון
+                const thumbnailData = mediaFile.thumbnail_data || 
+                    (mediaFile.thumbnail && mediaStore.has(mediaFile.thumbnail) ? 
+                        mediaStore.get(mediaFile.thumbnail).data : null);
+                
+                // צור קובץ זמני להורדה
+                const downloadInfo = createDownloadableFile(mediaFile, mediaFile.name || 'sticker.tgs');
+                
+                container.innerHTML = `
+                    <div class="sticker-placeholder">
+                        ${thumbnailData ? 
+                            `<img src="${thumbnailData}" alt="תמונה ממוזערת של סטיקר" class="sticker-thumbnail">` : 
+                            `<span class="sticker-emoji">😀</span>`
+                        }
+                        <div class="sticker-info">סטיקר מונפש</div>
+                        <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-link">
+                            <i class="fas fa-download"></i> הורד את הסטיקר
+                        </a>
+                    </div>
+                `;
+                return false;
+            }
+        }
+
+        // פונקציה משופרת לטיפול בקובץ MOV
+        function handleMovVideo(mediaFile, containerId) {
+            if (!mediaFile || !mediaFile.data) return false;
+            
+            try {
+                const container = document.getElementById(containerId);
+                if (!container) return false;
+                
+                // צור קובץ זמני להורדה
+                const downloadInfo = createDownloadableFile(mediaFile, mediaFile.name || 'video.mov');
+                
+                // בדוק אם יש תמונה ממוזערת
+                const thumbnailData = mediaFile.thumbnail_data || 
+                    (mediaFile.thumbnail && mediaStore.has(mediaFile.thumbnail) ? 
+                        mediaStore.get(mediaFile.thumbnail).data : null);
+                
+                // נסה להמיר את הוידאו ל-MP4 (לא תמיד אפשרי בדפדפן)
+                // לכן קודם נציג את הוידאו כפי שהוא עם מספר פורמטים אפשריים
+                container.innerHTML = `
+                    <div class="video-player">
+                        <video controls width="100%" poster="${thumbnailData || ''}">
+                            <source src="${downloadInfo.url}" type="video/quicktime">
+                            <source src="${downloadInfo.url}" type="video/mp4">
+                            <source src="${downloadInfo.url}" type="video/x-m4v">
+                            <div class="video-fallback">
+                                <div class="video-fallback-icon">
+                                    <i class="fas fa-video"></i>
+                                </div>
+                                <p>הדפדפן לא יכול להציג את הסרטון</p>
+                            </div>
+                        </video>
+                    </div>
+                    <div class="video-download" style="text-align: center;">
+                        <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-link">
+                            <i class="fas fa-download"></i> הורד את הסרטון
+                        </a>
+                    </div>
+                `;
+                
+                // בדוק אם הוידאו נטען בהצלחה
+                const videoElement = container.querySelector('video');
+                
+                videoElement.addEventListener('error', () => {
+                    // אם יש שגיאה, הצג תמונה ממוזערת עם קישור להורדה
+                    if (thumbnailData) {
+                        container.innerHTML = `
+                            <div class="video-thumbnail">
+                                <img src="${thumbnailData}" alt="תמונה ממוזערת של סרטון" class="attachment-image">
+                                <div class="video-play-icon"><i class="fas fa-play-circle"></i></div>
+                            </div>
+                            <div class="video-info">
+                                <p>לא ניתן להציג את הסרטון בדפדפן</p>
+                                <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-link">
+                                    <i class="fas fa-download"></i> הורד את הסרטון
+                                </a>
+                            </div>
+                        `;
+                    } else {
+                        // אם אין תמונה ממוזערת, הצג רק אייקון וקישור הורדה
+                        container.innerHTML = `
+                            <div class="video-fallback">
+                                <div class="video-fallback-icon">
+                                    <i class="fas fa-video"></i>
+                                </div>
+                                <p>לא ניתן להציג את הסרטון בדפדפן</p>
+                                <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-link">
+                                    <i class="fas fa-download"></i> הורד את הסרטון
+                                </a>
+                            </div>
+                        `;
+                    }
+                });
+                
+                return true;
+            } catch (error) {
+                console.error('שגיאה בטיפול בקובץ MOV:', error);
+                return false;
+            }
+        }
+
+        // פונקציה משופרת לטיפול בכל קובץ כללי
+        function handleGenericFile(mediaFile, containerId) {
+            if (!mediaFile || !mediaFile.data) return false;
+            
+            try {
+                const container = document.getElementById(containerId);
+                if (!container) return false;
+                
+                // צור קובץ זמני להורדה
+                const downloadInfo = createDownloadableFile(mediaFile, mediaFile.name);
+                if (!downloadInfo) {
+                    throw new Error("לא ניתן ליצור קישור להורדה");
+                }
+                
+                // אייקון מתאים לסוג הקובץ
+                const fileIcon = getFileIcon(mediaFile.name, mediaFile.type);
+                const fileSize = formatFileSize(downloadInfo.size);
+                const fileExt = getFileExtension(mediaFile.name);
+                
+                // פונקציה לבדיקה אם אפשר להציג את הקובץ ישירות
+                const canDisplay = canDisplayFile(fileExt, mediaFile.type);
+                
+                if (canDisplay) {
+                    // אם אפשר להציג את הקובץ ישירות
+                    if (fileExt === 'pdf') {
+                        // אם זה PDF, נשתמש באלמנט iframe
+                        container.innerHTML = `
+                            <div class="file-preview-container">
+                                <div class="file-info" style="margin-bottom: 10px;">
+                                    <div class="file-download-container">
+                                        <div class="file-icon">
+                                            <i class="${fileIcon}"></i>
+                                        </div>
+                                        <div class="file-info">
+                                            <div class="file-name">${mediaFile.name || 'קובץ'}</div>
+                                            <div class="file-size">${fileSize}</div>
+                                        </div>
+                                        <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-button">
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="file-preview">
+                                    <iframe src="${downloadInfo.url}" width="100%" height="300px" style="border: 1px solid #ddd; border-radius: 4px;"></iframe>
+                                </div>
+                            </div>
+                        `;
+                    } else if (fileExt === 'txt' || fileExt === 'html' || fileExt === 'css' || fileExt === 'js') {
+                        // אם זה קובץ טקסט, ננסה להציג את התוכן
+                        fetch(downloadInfo.url)
+                            .then(response => response.text())
+                            .then(text => {
+                                container.innerHTML = `
+                                    <div class="file-preview-container">
+                                        <div class="file-info" style="margin-bottom: 10px;">
+                                            <div class="file-download-container">
+                                                <div class="file-icon">
+                                                    <i class="${fileIcon}"></i>
+                                                </div>
+                                                <div class="file-info">
+                                                    <div class="file-name">${mediaFile.name || 'קובץ'}</div>
+                                                    <div class="file-size">${fileSize}</div>
+                                                </div>
+                                                <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-button">
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <div class="file-preview" style="max-height: 200px; overflow: auto; background-color: #f5f5f5; padding: 10px; border-radius: 4px; direction: ltr; text-align: left; font-family: monospace; white-space: pre-wrap;">
+                                            ${text.substring(0, 1000)}${text.length > 1000 ? '...' : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            })
+                            .catch(error => {
+                                console.error('שגיאה בטעינת קובץ טקסט:', error);
+                                // אם יש שגיאה, הצג רק את מידע הקובץ
+                                displayFileInfoOnly();
+                            });
+                    } else {
+                        // קבצים אחרים שאפשר להציג ישירות
+                        displayFileInfoOnly();
+                    }
+                } else {
+                    // אי אפשר להציג ישירות, הצג רק מידע על הקובץ
+                    displayFileInfoOnly();
+                }
+                
+                // פונקציה להצגת מידע על הקובץ בלבד
+                function displayFileInfoOnly() {
+                    container.innerHTML = `
+                        <div class="file-download-container">
+                            <div class="file-icon">
+                                <i class="${fileIcon}"></i>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-name">${mediaFile.name || 'קובץ'}</div>
+                                <div class="file-size">${fileSize}</div>
+                            </div>
+                            <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-button">
+                                <i class="fas fa-download"></i>
+                            </a>
+                        </div>
+                    `;
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('שגיאה בטיפול בקובץ:', error);
+                return false;
+            }
+        }
+
+        // פונקציה לבדיקה אם ניתן להציג את הקובץ ישירות
+        function canDisplayFile(extension, mimeType) {
+            if (!extension) return false;
+            
+            const displayableExtensions = ['pdf', 'txt', 'html', 'css', 'js'];
+            return displayableExtensions.includes(extension.toLowerCase());
+        }
+
+        // פונקציה לקבלת סיומת הקובץ
+        function getFileExtension(filename) {
+            if (!filename) return '';
+            return filename.split('.').pop().toLowerCase();
+        }
 
         // טיפול בקובץ JSON
         function handleJsonFile(e) {
@@ -1574,242 +1871,246 @@ function handleGenericFile(mediaFile, containerId) {
         }
         
         // פונקציה לשמירת תמונות ממוזערות
-function saveThumbnails(allFiles, zip) {
-    console.log("שומר תמונות ממוזערות...");
-    
-    // מצא את כל הקבצים שהם תמונות ממוזערות
-    const thumbnailFiles = allFiles.filter(file => 
-        file.path.includes('_thumb.') || 
-        file.path.includes('thumbnail')
-    );
-    
-    const thumbnailPromises = thumbnailFiles.map(file => {
-        return file.entry.async('blob').then(function(blob) {
-            return new Promise(function(resolve) {
-                const fileName = getFileNameFromPath(file.path);
-                const fileType = getFileType(fileName, blob.type);
-                
-                const reader = new FileReader();
-                reader.onload = function() {
-                    // שמור את התמונה הממוזערת במאגר המדיה
-                    mediaStore.set(file.path, {
-                        data: reader.result,
-                        type: fileType,
-                        name: fileName,
-                        path: file.path,
-                        is_thumbnail: true
+        function saveThumbnails(allFiles, zip) {
+            console.log("שומר תמונות ממוזערות...");
+            
+            // מצא את כל הקבצים שהם תמונות ממוזערות
+            const thumbnailFiles = allFiles.filter(file => 
+                file.path.includes('_thumb.') || 
+                file.path.includes('thumbnail')
+            );
+            
+            const thumbnailPromises = thumbnailFiles.map(file => {
+                return file.entry.async('blob').then(function(blob) {
+                    return new Promise(function(resolve) {
+                        const fileName = getFileNameFromPath(file.path);
+                        const fileType = getFileType(fileName, blob.type);
+                        
+                        const reader = new FileReader();
+                        reader.onload = function() {
+                            // שמור את התמונה הממוזערת במאגר המדיה
+                            mediaStore.set(file.path, {
+                                data: reader.result,
+                                type: fileType,
+                                name: fileName,
+                                path: file.path,
+                                is_thumbnail: true
+                            });
+                            
+                            resolve();
+                        };
+                        reader.readAsDataURL(blob);
                     });
-                    
-                    resolve();
-                };
-                reader.readAsDataURL(blob);
+                });
             });
-        });
-    });
-    
-    return Promise.all(thumbnailPromises);
-}
+            
+            return Promise.all(thumbnailPromises);
+        }
 
         // טיפול בקובץ ZIP מלא
         async function handleZipFile(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    showLoader('מעבד קובץ ZIP...');
-    
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-        const data = e.target.result;
-        
-        try {
-            const zip = await JSZip.loadAsync(data);
-            let mediaCount = 0;
-            let jsonFound = false;
-            let jsonData = null;
+            const file = e.target.files[0];
+            if (!file) return;
             
-            // כל הקבצים בגיבוי
-            const allFiles = [];
+            showLoader('מעבד קובץ ZIP...');
             
-            zip.forEach(function(relativePath, zipEntry) {
-                if (!zipEntry.dir) {
-                    allFiles.push({
-                        path: relativePath,
-                        entry: zipEntry
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const data = e.target.result;
+                
+                try {
+                    const zip = await JSZip.loadAsync(data);
+                    let mediaCount = 0;
+                    let jsonFound = false;
+                    let jsonData = null;
+                    
+                    // כל הקבצים בגיבוי
+                    const allFiles = [];
+                    
+                    zip.forEach(function(relativePath, zipEntry) {
+                        if (!zipEntry.dir) {
+                            allFiles.push({
+                                path: relativePath,
+                                entry: zipEntry
+                            });
+                        }
                     });
+                    
+                    // חפש את קובץ ה-JSON הראשי
+                    const jsonFiles = allFiles.filter(file => file.path.endsWith('result.json'));
+                    
+                    if (jsonFiles.length === 0) {
+                        showStatusMessage('לא נמצא קובץ JSON ראשי (result.json) בארכיון', 'error');
+                        hideLoader();
+                        return;
+                    }
+                    
+                    // טען תחילה את קובץ ה-JSON
+                    try {
+                        const jsonContent = await jsonFiles[0].entry.async('text');
+                        jsonData = JSON.parse(jsonContent);
+                        jsonFound = true;
+                        processTelegramExport(jsonData);
+                        
+                        // מעבד קבצי מדיה
+                        console.log('מעבד קבצי מדיה...');
+
+                        // שמור תחילה את התמונות הממוזערות
+                        await saveThumbnails(allFiles, zip);
+
+                        // קבצים בעייתיים שדורשים טיפול מיוחד
+                        const problematicFiles = [
+                            "IMG_2435.MOV",
+                            "AnimatedSticker.tgs",
+                            "IMG_6855.HEIC",
+                            "video.mp4"  // הוידאו העגול
+                        ];
+
+                        // טיפול מיוחד בקבצים הבעייתיים
+                        const specialMediaFiles = allFiles.filter(file => {
+                            const fileName = getFileNameFromPath(file.path);
+                            return problematicFiles.includes(fileName);
+                        });
+
+                        console.log(`נמצאו ${specialMediaFiles.length} קבצים בעייתיים`);
+
+                        // עיבוד הקבצים הבעייתיים תחילה
+                        const specialPromises = specialMediaFiles.map(file => {
+                            return file.entry.async('blob').then(function(blob) {
+                                return new Promise(function(resolve) {
+                                    const fileName = getFileNameFromPath(file.path);
+                                    console.log(`מעבד קובץ בעייתי: ${fileName}, גודל: ${blob.size}, סוג: ${blob.type}`);
+                                    
+                                    const reader = new FileReader();
+                                    reader.onload = function() {
+                                        const fileType = getFileType(fileName, blob.type);
+                                        
+                                        // בדוק אם יש thumbnail לקובץ זה ושמור אותו
+                                        const thumbPath = `${file.path}_thumb.jpg`;
+                                        const thumbData = mediaStore.get(thumbPath);
+                                        
+                                        // שמור עם כל הדרכים האפשריות לגישה לקובץ
+                                        const mediaData = {
+                                            data: reader.result,
+                                            type: fileType,
+                                            name: fileName,
+                                            path: file.path,
+                                            size: blob.size
+                                        };
+                                        
+                                        // הוסף thumbnail אם קיים
+                                        if (thumbData) {
+                                            mediaData.thumbnail_data = thumbData.data;
+                                        }
+                                        
+                                        mediaStore.set(fileName, mediaData);
+                                        mediaStore.set(file.path, mediaData);
+                                        
+                                        // שמור גם לפי הנתיב החלקי
+                                        const partialPath = file.path.split('/').pop();
+                                        if (partialPath !== fileName) {
+                                            mediaStore.set(partialPath, mediaData);
+                                        }
+                                        
+                                        console.log(`קובץ ${fileName} נשמר בהצלחה`);
+                                        resolve();
+                                    };
+                                    reader.readAsDataURL(blob);
+                                });
+                            }).catch(error => {
+                                console.error(`שגיאה בעיבוד הקובץ ${file.path}:`, error);
+                                return Promise.resolve(); // המשך גם אם יש שגיאה
+                            });
+                        });
+
+                        await Promise.all(specialPromises);
+
+                        // עכשיו עבד את שאר הקבצים
+                        const regularMediaFiles = allFiles.filter(file => {
+                            // דלג על קובץ ה-JSON, תמונות ממוזערות, וקבצים שכבר עיבדנו
+                            const fileName = getFileNameFromPath(file.path);
+                            return file.path !== jsonFiles[0].path && 
+                                   !file.path.includes('_thumb.') && 
+                                   !file.path.endsWith('.json') &&
+                                   !problematicFiles.includes(fileName);
+                        });
+
+                        console.log(`מעבד ${regularMediaFiles.length} קבצי מדיה רגילים...`);
+
+                        // עיבוד שאר הקבצים
+                        const mediaPromises = regularMediaFiles.map(file => {
+                            return file.entry.async('blob').then(function(blob) {
+                                return new Promise(function(resolve) {
+                                    const fileName = getFileNameFromPath(file.path);
+                                    const dirName = getDirNameFromPath(file.path);
+                                    const fileType = getFileType(fileName, blob.type);
+                                    
+                                    const reader = new FileReader();
+                                    reader.onload = function() {
+                                        // בדוק אם יש thumbnail לקובץ זה ושמור אותו
+                                        const thumbPath = `${file.path}_thumb.jpg`;
+                                        const thumbData = mediaStore.get(thumbPath);
+                                        
+                                        // הכן את אובייקט המדיה
+                                        const mediaData = {
+                                            data: reader.result,
+                                            type: fileType,
+                                            name: fileName,
+                                            path: file.path,
+                                            directory: dirName
+                                        };
+                                        
+                                        // הוסף thumbnail אם קיים
+                                        if (thumbData) {
+                                            mediaData.thumbnail_data = thumbData.data;
+                                        }
+                                        
+                                        // שמור תיקייה ושם קובץ מלא לזיהוי טוב יותר
+                                        mediaStore.set(fileName, mediaData);
+                                        
+                                        // שמור גם עם הנתיב המלא כמפתח
+                                        mediaStore.set(file.path, mediaData);
+                                        
+                                        mediaCount++;
+                                        if (mediaCount % 10 === 0) {
+                                            updateLoaderText(`מעבד קבצי מדיה... ${mediaCount}/${regularMediaFiles.length + specialMediaFiles.length}`);
+                                        }
+                                        resolve();
+                                    };
+                                    reader.readAsDataURL(blob);
+                                });
+                            }).catch(error => {
+                                console.error(`שגיאה בעיבוד הקובץ ${file.path}:`, error);
+                                return Promise.resolve(); // המשך גם אם יש שגיאה
+                            });
+                        });
+
+                        await Promise.all(mediaPromises);
+                        console.log('מאגר המדיה:', Array.from(mediaStore.keys()));
+                        updateChatView();
+                        showStatusMessage(`השיחה נטענה בהצלחה עם ${mediaCount + specialMediaFiles.length} קבצי מדיה`, 'success');
+                        hideLoader();
+                        
+                    } catch (error) {
+                        console.error('Error parsing JSON:', error);
+                        showStatusMessage('שגיאה בעיבוד קובץ ה-JSON', 'error');
+                        hideLoader();
+                    }
+                } catch (error) {
+                    console.error('Error loading zip file:', error);
+                    showStatusMessage('שגיאה בפתיחת קובץ הארכיון', 'error');
+                    hideLoader();
                 }
-            });
+            };
             
-            // חפש את קובץ ה-JSON הראשי
-            const jsonFiles = allFiles.filter(file => file.path.endsWith('result.json'));
+            reader.onerror = function() {
+                console.error('Error reading zip file');
+                showStatusMessage('שגיאה בקריאת קובץ הארכיון', 'error');
+                hideLoader();
+            };
             
-            if (jsonFiles.length === 0) {
-                showStatusMessage('לא נמצא קובץ JSON ראשי (result.json) בארכיון', 'error');
-                hideLoader();
-                return;
-            }
-            
-            // טען תחילה את קובץ ה-JSON
-            try {
-                const jsonContent = await jsonFiles[0].entry.async('text');
-                jsonData = JSON.parse(jsonContent);
-                jsonFound = true;
-                processTelegramExport(jsonData);
-                
-                // מעבד קבצי מדיה
-                console.log('מעבד קבצי מדיה...');
-
-                // שמור תחילה את התמונות הממוזערות
-                await saveThumbnails(allFiles, zip);
-
-                // קבצים בעייתיים שדורשים טיפול מיוחד
-                const problematicFiles = [
-                    "IMG_2435.MOV",
-                    "AnimatedSticker.tgs",
-                    "IMG_6855.HEIC",
-                    "video.mp4"  // הוידאו העגול
-                ];
-
-                // טיפול מיוחד בקבצים הבעייתיים
-                const specialMediaFiles = allFiles.filter(file => {
-                    const fileName = getFileNameFromPath(file.path);
-                    return problematicFiles.includes(fileName);
-                });
-
-                console.log(`נמצאו ${specialMediaFiles.length} קבצים בעייתיים`);
-
-                // עיבוד הקבצים הבעייתיים תחילה
-                const specialPromises = specialMediaFiles.map(file => {
-                    return file.entry.async('blob').then(function(blob) {
-                        return new Promise(function(resolve) {
-                            const fileName = getFileNameFromPath(file.path);
-                            console.log(`מעבד קובץ בעייתי: ${fileName}, גודל: ${blob.size}, סוג: ${blob.type}`);
-                            
-                            const reader = new FileReader();
-                            reader.onload = function() {
-                                const fileType = getFileType(fileName, blob.type);
-                                
-                                // שמור עם כל הדרכים האפשריות לגישה לקובץ
-                                mediaStore.set(fileName, {
-                                    data: reader.result,
-                                    type: fileType,
-                                    name: fileName,
-                                    path: file.path,
-                                    size: blob.size
-                                });
-                                
-                                mediaStore.set(file.path, {
-                                    data: reader.result,
-                                    type: fileType,
-                                    name: fileName,
-                                    path: file.path,
-                                    size: blob.size
-                                });
-                                
-                                // שמור גם לפי הנתיב החלקי
-                                const partialPath = file.path.split('/').pop();
-                                if (partialPath !== fileName) {
-                                    mediaStore.set(partialPath, {
-                                        data: reader.result,
-                                        type: fileType,
-                                        name: fileName,
-                                        path: file.path,
-                                        size: blob.size
-                                    });
-                                }
-                                
-                                console.log(`קובץ ${fileName} נשמר בהצלחה`);
-                                resolve();
-                            };
-                            reader.readAsDataURL(blob);
-                        });
-                    }).catch(error => {
-                        console.error(`שגיאה בעיבוד הקובץ ${file.path}:`, error);
-                        return Promise.resolve(); // המשך גם אם יש שגיאה
-                    });
-                });
-
-                await Promise.all(specialPromises);
-
-                // עכשיו עבד את שאר הקבצים
-                const regularMediaFiles = allFiles.filter(file => {
-                    // דלג על קובץ ה-JSON, תמונות ממוזערות, וקבצים שכבר עיבדנו
-                    const fileName = getFileNameFromPath(file.path);
-                    return file.path !== jsonFiles[0].path && 
-                           !file.path.includes('_thumb.') && 
-                           !file.path.endsWith('.json') &&
-                           !problematicFiles.includes(fileName);
-                });
-
-                console.log(`מעבד ${regularMediaFiles.length} קבצי מדיה רגילים...`);
-
-                // עיבוד שאר הקבצים
-                const mediaPromises = regularMediaFiles.map(file => {
-                    return file.entry.async('blob').then(function(blob) {
-                        return new Promise(function(resolve) {
-                            const fileName = getFileNameFromPath(file.path);
-                            const dirName = getDirNameFromPath(file.path);
-                            const fileType = getFileType(fileName, blob.type);
-                            
-                            const reader = new FileReader();
-                            reader.onload = function() {
-                                // שמור תיקייה ושם קובץ מלא לזיהוי טוב יותר
-                                mediaStore.set(fileName, {
-                                    data: reader.result,
-                                    type: fileType,
-                                    name: fileName,
-                                    path: file.path,
-                                    directory: dirName
-                                });
-                                
-                                // שמור גם עם הנתיב המלא כמפתח
-                                mediaStore.set(file.path, {
-                                    data: reader.result,
-                                    type: fileType,
-                                    name: fileName,
-                                    path: file.path,
-                                    directory: dirName
-                                });
-                                
-                                mediaCount++;
-                                if (mediaCount % 10 === 0) {
-                                    updateLoaderText(`מעבד קבצי מדיה... ${mediaCount}/${regularMediaFiles.length + specialMediaFiles.length}`);
-                                }
-                                resolve();
-                            };
-                            reader.readAsDataURL(blob);
-                        });
-                    }).catch(error => {
-                        console.error(`שגיאה בעיבוד הקובץ ${file.path}:`, error);
-                        return Promise.resolve(); // המשך גם אם יש שגיאה
-                    });
-                });
-
-                await Promise.all(mediaPromises);
-                console.log('מאגר המדיה:', Array.from(mediaStore.keys()));
-                updateChatView();
-                showStatusMessage(`השיחה נטענה בהצלחה עם ${mediaCount + specialMediaFiles.length} קבצי מדיה`, 'success');
-                hideLoader();
-                
-            } catch (error) {
-                console.error('Error parsing JSON:', error);
-                showStatusMessage('שגיאה בעיבוד קובץ ה-JSON', 'error');
-                hideLoader();
-            }
-        } catch (error) {
-            console.error('Error loading zip file:', error);
-            showStatusMessage('שגיאה בפתיחת קובץ הארכיון', 'error');
-            hideLoader();
+            reader.readAsArrayBuffer(file);
         }
-    };
-    
-    reader.onerror = function() {
-        console.error('Error reading zip file');
-        showStatusMessage('שגיאה בקריאת קובץ הארכיון', 'error');
-        hideLoader();
-    };
-    
-    reader.readAsArrayBuffer(file);
-}
 
         // חילוץ שם קובץ מנתיב
         function getFileNameFromPath(path) {
@@ -1865,52 +2166,52 @@ function saveThumbnails(allFiles, zip) {
         
         // זיהוי סוג הקובץ
         function getFileType(fileName, fallbackType) {
-    const lowerName = typeof fileName === 'string' ? fileName.toLowerCase() : '';
-    
-    // Match by extension for better type detection
-    if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.includes('photo_')) {
-        return 'image/jpeg';
-    }
-    if (lowerName.endsWith('.png')) {
-        return 'image/png';
-    }
-    if (lowerName.endsWith('.heic') || lowerName.endsWith('.HEIC')) {
-        return 'image/heic'; // HEIC format
-    }
-    if (lowerName.endsWith('.mp4') || lowerName.includes('video_')) {
-        return 'video/mp4';
-    }
-    if (lowerName.endsWith('.mov') || lowerName.endsWith('.MOV')) {
-        return 'video/quicktime'; // MOV format
-    }
-    if (lowerName.includes('round_video_')) {
-        return 'video/mp4';
-    }
-    if (lowerName.endsWith('.ogg') || lowerName.endsWith('.opus') || lowerName.includes('voice_')) {
-        return 'audio/ogg';
-    }
-    if (lowerName.endsWith('.mp3') || lowerName.includes('audio_')) {
-        return 'audio/mp3';
-    }
-    if (lowerName.endsWith('.webp') || lowerName.includes('sticker_')) {
-        return 'image/webp';
-    }
-    if (lowerName.endsWith('.tgs')) {
-        return 'application/x-tgsticker';
-    }
-    if (lowerName.endsWith('.gif') || lowerName.includes('animation_')) {
-        return 'image/gif';
-    }
-    
-    // Add more file types as needed
-    if (lowerName.endsWith('.pdf')) return 'application/pdf';
-    if (lowerName.endsWith('.doc') || lowerName.endsWith('.docx')) return 'application/msword';
-    if (lowerName.endsWith('.wav')) return 'audio/wav';
-    if (lowerName.endsWith('.m4a')) return 'audio/m4a';
-    
-    // Return fallback type if provided
-    return fallbackType || 'application/octet-stream';
-}
+            const lowerName = typeof fileName === 'string' ? fileName.toLowerCase() : '';
+            
+            // Match by extension for better type detection
+            if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.includes('photo_')) {
+                return 'image/jpeg';
+            }
+            if (lowerName.endsWith('.png')) {
+                return 'image/png';
+            }
+            if (lowerName.endsWith('.heic') || lowerName.endsWith('.HEIC')) {
+                return 'image/heic'; // HEIC format
+            }
+            if (lowerName.endsWith('.mp4') || lowerName.includes('video_')) {
+                return 'video/mp4';
+            }
+            if (lowerName.endsWith('.mov') || lowerName.endsWith('.MOV')) {
+                return 'video/quicktime'; // MOV format
+            }
+            if (lowerName.includes('round_video_')) {
+                return 'video/mp4';
+            }
+            if (lowerName.endsWith('.ogg') || lowerName.endsWith('.opus') || lowerName.includes('voice_')) {
+                return 'audio/ogg';
+            }
+            if (lowerName.endsWith('.mp3') || lowerName.includes('audio_')) {
+                return 'audio/mp3';
+            }
+            if (lowerName.endsWith('.webp') || lowerName.includes('sticker_')) {
+                return 'image/webp';
+            }
+            if (lowerName.endsWith('.tgs')) {
+                return 'application/x-tgsticker';
+            }
+            if (lowerName.endsWith('.gif') || lowerName.includes('animation_')) {
+                return 'image/gif';
+            }
+            
+            // Add more file types as needed
+            if (lowerName.endsWith('.pdf')) return 'application/pdf';
+            if (lowerName.endsWith('.doc') || lowerName.endsWith('.docx')) return 'application/msword';
+            if (lowerName.endsWith('.wav')) return 'audio/wav';
+            if (lowerName.endsWith('.m4a')) return 'audio/m4a';
+            
+            // Return fallback type if provided
+            return fallbackType || 'application/octet-stream';
+        }
 
         // ===================================================
         // ================ עיבוד ייצוא טלגרם ================
@@ -1918,280 +2219,281 @@ function saveThumbnails(allFiles, zip) {
         
         // פונקציה לעיבוד הייצוא של טלגרם
         function processTelegramExport(data) {
-    // ניקוי מאגר המשתתפים הקודם
-    participants.clear();
-    
-    // עיבוד מידע על השיחה
-    if (data.name) {
-        chatData.name = data.name;
-    } else if (data.chat && data.chat.name) {
-        chatData.name = data.chat.name;
-    } else {
-        chatData.name = 'Telegram Chat';
-    }
-    
-    if (data.type) {
-        chatData.type = data.type;
-    } else if (data.chat && data.chat.type) {
-        chatData.type = data.chat.type;
-    } else {
-        chatData.type = 'private';
-    }
-    
-    chatData.about = data.about || (data.chat && data.chat.about) || '';
-    
-    // זיהוי המשתמש הנוכחי
-    if (data.personal_information) {
-        currentUser.id = data.personal_information.user_id || null;
-        currentUser.name = data.personal_information.first_name || '';
-        if (data.personal_information.last_name) {
-            currentUser.name += ' ' + data.personal_information.last_name;
-        }
-        currentUser.username = data.personal_information.username || '';
-    }
-    
-    // עיבוד רשימת המשתתפים/אנשי קשר
-    const usersData = data.users || (data.chat && data.chat.users) || [];
-    
-    usersData.forEach(user => {
-        let userName = user.first_name || '';
-        if (user.last_name) {
-            userName += ' ' + user.last_name;
-        }
-        
-        // אם אין שם, השתמש בשם המשתמש
-        if (!userName && user.username) {
-            userName = user.username;
-        }
-        
-        // אם עדיין אין שם, השתמש במזהה
-        if (!userName) {
-            userName = `User ${user.id}`;
-        }
-        
-        // הוסף את המשתמש למאגר המשתתפים
-        addParticipant(user.id, userName, user.username);
-    });
-    
-    // עיבוד ההודעות
-    chatData.messages = [];
-    
-    const messagesData = data.messages || (data.chat && data.chat.messages) || [];
-    
-    messagesData.forEach(msg => {
-        // טיפול בסוגים שונים של הודעות
-        if (msg.type === 'service' || msg.action) {
-            // הודעת שירות (הצטרפות/עזיבה/שינוי שם וכו')
-            chatData.messages.push({
-                id: msg.id,
-                type: 'service',
-                date: formatDate(msg.date),
-                text: msg.text || msg.action || '',
-                action: msg.action || ''
+            // ניקוי מאגר המשתתפים הקודם
+            participants.clear();
+            
+            // עיבוד מידע על השיחה
+            if (data.name) {
+                chatData.name = data.name;
+            } else if (data.chat && data.chat.name) {
+                chatData.name = data.chat.name;
+            } else {
+                chatData.name = 'Telegram Chat';
+            }
+            
+            if (data.type) {
+                chatData.type = data.type;
+            } else if (data.chat && data.chat.type) {
+                chatData.type = data.chat.type;
+            } else {
+                chatData.type = 'private';
+            }
+            
+            chatData.about = data.about || (data.chat && data.chat.about) || '';
+            
+            // זיהוי המשתמש הנוכחי
+            if (data.personal_information) {
+                currentUser.id = data.personal_information.user_id || null;
+                currentUser.name = data.personal_information.first_name || '';
+                if (data.personal_information.last_name) {
+                    currentUser.name += ' ' + data.personal_information.last_name;
+                }
+                currentUser.username = data.personal_information.username || '';
+            }
+            
+            // עיבוד רשימת המשתתפים/אנשי קשר
+            const usersData = data.users || (data.chat && data.chat.users) || [];
+            
+            usersData.forEach(user => {
+                let userName = user.first_name || '';
+                if (user.last_name) {
+                    userName += ' ' + user.last_name;
+                }
+                
+                // אם אין שם, השתמש בשם המשתמש
+                if (!userName && user.username) {
+                    userName = user.username;
+                }
+                
+                // אם עדיין אין שם, השתמש במזהה
+                if (!userName) {
+                    userName = `User ${user.id}`;
+                }
+                
+                // הוסף את המשתמש למאגר המשתתפים
+                addParticipant(user.id, userName, user.username);
             });
-        } else {
-            // הודעה רגילה
-            let isOutgoing = false;
-            let senderId = msg.from_id;
             
-            // בדוק אם ההודעה היא יוצאת (נשלחה ע"י המשתמש הנוכחי)
-            if (msg.from_id === currentUser.id || msg.out || msg.outgoing) {
-                isOutgoing = true;
-            }
+            // עיבוד ההודעות
+            chatData.messages = [];
             
-            // בחלק מהפורמטים, ה-ID של השולח נמצא תחת 'from'
-            if (!senderId && msg.from) {
-                if (typeof msg.from === 'object' && msg.from.id) {
-                    senderId = msg.from.id;
-                } else if (typeof msg.from === 'string' || typeof msg.from === 'number') {
-                    senderId = msg.from;
-                }
-            }
+            const messagesData = data.messages || (data.chat && data.chat.messages) || [];
             
-            // קבל שם השולח
-            let senderName = msg.from_name || '';
-            
-            // אם אין שם מפורש, נסה למצוא את השולח ברשימת המשתתפים
-            if (!senderName && senderId && participants.has(senderId)) {
-                senderName = participants.get(senderId).name;
-            } else if (!senderName && msg.from) {
-                // אם יש אובייקט 'from', קח את השם ממנו
-                if (typeof msg.from === 'object') {
-                    senderName = msg.from.first_name || '';
-                    if (msg.from.last_name) {
-                        senderName += ' ' + msg.from.last_name;
+            messagesData.forEach(msg => {
+                // טיפול בסוגים שונים של הודעות
+                if (msg.type === 'service' || msg.action) {
+                    // הודעת שירות (הצטרפות/עזיבה/שינוי שם וכו')
+                    chatData.messages.push({
+                        id: msg.id,
+                        type: 'service',
+                        date: formatDate(msg.date),
+                        text: msg.text || msg.action || '',
+                        action: msg.action || ''
+                    });
+                } else {
+                    // הודעה רגילה
+                    let isOutgoing = false;
+                    let senderId = msg.from_id;
+                    
+                    // בדוק אם ההודעה היא יוצאת (נשלחה ע"י המשתמש הנוכחי)
+                    if (msg.from_id === currentUser.id || msg.out || msg.outgoing) {
+                        isOutgoing = true;
                     }
-                } else {
-                    senderName = String(msg.from);
-                }
-            }
-            
-            // אם עדיין אין שם שולח, הגדר כלא ידוע
-            if (!senderName) {
-                senderName = 'Unknown';
-            }
-            
-            // בדוק אם השולח כבר קיים ברשימת המשתתפים, אם לא - הוסף אותו
-            if (senderId && !participants.has(senderId)) {
-                addParticipant(senderId, senderName, null);
-            }
-            
-            // הכן את ההודעה
-            const messageText = msg.text || '';
-            
-            // חפש את הקובץ המדיה המתאים
-            let mediaType = null;
-            let mediaFile = null;
-            let mediaFileId = null;
-            let mediaDuration = null;
-            let fileName = null;
-            
-            // בדוק את כל סוגי המדיה האפשריים
-            if (msg.photo) {
-                mediaType = 'photo';
-                mediaFile = msg.photo;
-                mediaFileId = getMediaId(msg.photo, 'photo');
-            } else if (msg.video) {
-                mediaType = 'video';
-                mediaFile = msg.video;
-                mediaFileId = getMediaId(msg.video, 'video');
-                mediaDuration = msg.video.duration;
-            } else if (msg.file) {
-                // טיפול בקבצים מבוסס על media_type
-                if (msg.media_type === 'video_file' || msg.mime_type?.includes('video')) {
-                    mediaType = 'video';
-                    fileName = msg.file_name;
-                } else if (msg.media_type === 'voice_message') {
-                    mediaType = 'voice';
-                    fileName = msg.file_name;
-                } else if (msg.media_type === 'video_message') {
-                    mediaType = 'video_note';
-                    fileName = msg.file_name;
-                } else if (msg.media_type === 'sticker') {
-                    mediaType = 'sticker';
-                    fileName = msg.file_name;
-                } else if (msg.media_type === 'animation') {
-                    mediaType = 'animation';
-                    fileName = msg.file_name;
-                } else {
-                    mediaType = 'document';
-                    fileName = msg.file_name;
-                }
-                
-                mediaFile = msg.file;
-                mediaFileId = getFileNameFromPath(msg.file);
-                mediaDuration = msg.duration_seconds;
-            } else if (msg.voice) {
-                mediaType = 'voice';
-                mediaFile = msg.voice;
-                mediaFileId = getMediaId(msg.voice, 'voice');
-                mediaDuration = msg.voice.duration;
-            } else if (msg.audio) {
-                mediaType = 'audio';
-                mediaFile = msg.audio;
-                mediaFileId = getMediaId(msg.audio, 'audio');
-                mediaDuration = msg.audio.duration;
-            } else if (msg.sticker) {
-                mediaType = 'sticker';
-                mediaFile = msg.sticker;
-                mediaFileId = getMediaId(msg.sticker, 'sticker');
-            } else if (msg.animation) {
-                mediaType = 'animation';
-                mediaFile = msg.animation;
-                mediaFileId = getMediaId(msg.animation, 'animation');
-            } else if (msg.document || msg.file) {
-                mediaType = 'document';
-                mediaFile = msg.document || msg.file;
-                mediaFileId = getMediaId(msg.document || msg.file, 'document');
-                fileName = msg.file_name;
-            } else if (msg.location) {
-                mediaType = 'location';
-                mediaFile = null;
-                mediaFileId = null;
-            } else if (msg.poll) {
-                mediaType = 'poll';
-                mediaFile = null;
-                mediaFileId = null;
-            } else if (msg.video_note) {
-                mediaType = 'video_note';
-                mediaFile = msg.video_note;
-                mediaFileId = getMediaId(msg.video_note, 'round_video');
-                mediaDuration = msg.video_note.duration;
-            }
-            
-            // יצירת אובייקט הודעה חדש
-            const message = {
-                id: msg.id,
-                type: 'message',
-                date: formatDate(msg.date),
-                time: formatTime(msg.date),
-                timestamp: new Date(msg.date).getTime(),
-                sender: senderName,
-                senderId: senderId,
-                text: messageText,
-                isOutgoing: isOutgoing,
-                edited: msg.edited || false,
-                forwarded: msg.forwarded_from ? true : false,
-                forwarded_from: msg.forwarded_from || null,
-                reply_to: msg.reply_to_message_id || null,
-                mediaType: mediaType,
-                mediaFile: mediaFile,
-                mediaFileId: mediaFileId,
-                mediaDuration: mediaDuration,
-                file: msg.file,                     // שמירת נתיב הקובץ המקורי
-                file_name: fileName || msg.file_name,  // שמירת שם הקובץ
-                sticker_emoji: msg.sticker_emoji,   // אימוג'י של סטיקר
-                mime_type: msg.mime_type,           // סוג MIME
-                media_type: msg.media_type,         // סוג המדיה כפי שמוגדר בטלגרם
-                views: msg.views || 0,
-                reactions: msg.reactions || []
-            };
-
-            // טיפול באיש קשר
-            if (msg.contact_information) {
-                message.mediaType = 'contact';
-                message.contact = msg.contact_information;
-            }
-
-            // טיפול במיקום
-            if (msg.location_information) {
-                message.mediaType = 'location';
-                message.location = msg.location_information;
-            }
-
-            // בדיקה נוספת לסטיקרים
-            if (message.mediaType === 'sticker' && msg.file && msg.file.endsWith('.tgs')) {
-                message.is_animated_sticker = true;
-            }
-
-            // בדיקה מיוחדת לקבצי HEIC
-            if (message.file_name && message.file_name.toLowerCase().endsWith('.heic')) {
-                message.is_heic = true;
-            }
-
-            // טיפול ספציפי לקבצי MOV
-            if (message.file_name && message.file_name.toLowerCase().endsWith('.mov')) {
-                message.mediaType = 'video';
-            }
-
-            // הוספת המידע על התמונה הממוזערת
-            if (msg.thumbnail) {
-                message.thumbnail = msg.thumbnail;
-                message.thumbnail_file_size = msg.thumbnail_file_size;
-            }
+                    
+                    // בחלק מהפורמטים, ה-ID של השולח נמצא תחת 'from'
+                    if (!senderId && msg.from) {
+                        if (typeof msg.from === 'object' && msg.from.id) {
+                            senderId = msg.from.id;
+                        } else if (typeof msg.from === 'string' || typeof msg.from === 'number') {
+                            senderId = msg.from;
+                        }
+                    }
+                    
+                    // קבל שם השולח
+                    let senderName = msg.from_name || '';
+                    
+                    // אם אין שם מפורש, נסה למצוא את השולח ברשימת המשתתפים
+                    if (!senderName && senderId && participants.has(senderId)) {
+                        senderName = participants.get(senderId).name;
+                    } else if (!senderName && msg.from) {
+                        // אם יש אובייקט 'from', קח את השם ממנו
+                        if (typeof msg.from === 'object') {
+                            senderName = msg.from.first_name || '';
+                            if (msg.from.last_name) {
+                                senderName += ' ' + msg.from.last_name;
+                            }
+                        } else {
+                            senderName = String(msg.from);
+                        }
+                    }
+                    
+                    // אם עדיין אין שם שולח, הגדר כלא ידוע
+                    if (!senderName) {
+                        senderName = 'Unknown';
+                    }
+                    
+                    // בדוק אם השולח כבר קיים ברשימת המשתתפים, אם לא - הוסף אותו
+                    if (senderId && !participants.has(senderId)) {
+                        addParticipant(senderId, senderName, null);
+                    }
+                    
+                    // הכן את ההודעה
+                    const messageText = msg.text || '';
+                    
+                    // חפש את הקובץ המדיה המתאים
+                    let mediaType = null;
+                    let mediaFile = null;
+                    let mediaFileId = null;
+                    let mediaDuration = null;
+                    let fileName = null;
+                    
+                    // בדוק את כל סוגי המדיה האפשריים
+                    if (msg.photo) {
+                        mediaType = 'photo';
+                        mediaFile = msg.photo;
+                        mediaFileId = getMediaId(msg.photo, 'photo');
+                    } else if (msg.video) {
+                        mediaType = 'video';
+                        mediaFile = msg.video;
+                        mediaFileId = getMediaId(msg.video, 'video');
+                        mediaDuration = msg.video.duration;
+                    } else if (msg.file) {
+                        // טיפול בקבצים מבוסס על media_type
+                        if (msg.media_type === 'video_file' || msg.mime_type?.includes('video')) {
+                            mediaType = 'video';
+                            fileName = msg.file_name;
+                        } else if (msg.media_type === 'voice_message') {
+                            mediaType = 'voice';
+                            fileName = msg.file_name;
+                        } else if (msg.media_type === 'video_message') {
+                            mediaType = 'video_note';
+                            fileName = msg.file_name;
+                        } else if (msg.media_type === 'sticker') {
+                            mediaType = 'sticker';
+                            fileName = msg.file_name;
+                        } else if (msg.media_type === 'animation') {
+                            mediaType = 'animation';
+                            fileName = msg.file_name;
+                        } else {
+                            mediaType = 'document';
+                            fileName = msg.file_name;
+                        }
                         
-                        chatData.messages.push(message);
+                        mediaFile = msg.file;
+                        mediaFileId = getFileNameFromPath(msg.file);
+                        mediaDuration = msg.duration_seconds;
+                    } else if (msg.voice) {
+                        mediaType = 'voice';
+                        mediaFile = msg.voice;
+                        mediaFileId = getMediaId(msg.voice, 'voice');
+                        mediaDuration = msg.voice.duration;
+                    } else if (msg.audio) {
+                        mediaType = 'audio';
+                        mediaFile = msg.audio;
+                        mediaFileId = getMediaId(msg.audio, 'audio');
+                        mediaDuration = msg.audio.duration;
+                    } else if (msg.sticker) {
+                        mediaType = 'sticker';
+                        mediaFile = msg.sticker;
+                        mediaFileId = getMediaId(msg.sticker, 'sticker');
+                    } else if (msg.animation) {
+                        mediaType = 'animation';
+                        mediaFile = msg.animation;
+                        mediaFileId = getMediaId(msg.animation, 'animation');
+                    } else if (msg.document || msg.file) {
+                        mediaType = 'document';
+                        mediaFile = msg.document || msg.file;
+                        mediaFileId = getMediaId(msg.document || msg.file, 'document');
+                        fileName = msg.file_name;
+                    } else if (msg.location) {
+                        mediaType = 'location';
+                        mediaFile = null;
+                        mediaFileId = null;
+                    } else if (msg.poll) {
+                        mediaType = 'poll';
+                        mediaFile = null;
+                        mediaFileId = null;
+                    } else if (msg.video_note) {
+                        mediaType = 'video_note';
+                        mediaFile = msg.video_note;
+                        mediaFileId = getMediaId(msg.video_note, 'round_video');
+                        mediaDuration = msg.video_note.duration;
                     }
-                });
-                
-                // מיון ההודעות לפי תאריך
-                chatData.messages.sort((a, b) => {
-                    if (a.timestamp && b.timestamp) {
-                        return a.timestamp - b.timestamp;
+                    
+                    // יצירת אובייקט הודעה חדש
+                    const message = {
+                        id: msg.id,
+                        type: 'message',
+                        date: formatDate(msg.date),
+                        time: formatTime(msg.date),
+                        timestamp: new Date(msg.date).getTime(),
+                        sender: senderName,
+                        senderId: senderId,
+                        text: messageText,
+                        isOutgoing: isOutgoing,
+                        edited: msg.edited || false,
+                        forwarded: msg.forwarded_from ? true : false,
+                        forwarded_from: msg.forwarded_from || null,
+                        reply_to: msg.reply_to_message_id || null,
+                        mediaType: mediaType,
+                        mediaFile: mediaFile,
+                        mediaFileId: mediaFileId,
+                        mediaDuration: mediaDuration,
+                        file: msg.file,                     // שמירת נתיב הקובץ המקורי
+                        file_name: fileName || msg.file_name,  // שמירת שם הקובץ
+                        sticker_emoji: msg.sticker_emoji,   // אימוג'י של סטיקר
+                        mime_type: msg.mime_type,           // סוג MIME
+                        media_type: msg.media_type,         // סוג המדיה כפי שמוגדר בטלגרם
+                        views: msg.views || 0,
+                        reactions: msg.reactions || [],
+                        thumbnail: msg.thumbnail         // נתיב לתמונה ממוזערת
+                    };
+
+                    // טיפול באיש קשר
+                    if (msg.contact_information) {
+                        message.mediaType = 'contact';
+                        message.contact = msg.contact_information;
                     }
-                    return 0;
-                });
-            }
+
+                    // טיפול במיקום
+                    if (msg.location_information) {
+                        message.mediaType = 'location';
+                        message.location = msg.location_information;
+                    }
+
+                    // בדיקה נוספת לסטיקרים
+                    if (message.mediaType === 'sticker' && msg.file && msg.file.endsWith('.tgs')) {
+                        message.is_animated_sticker = true;
+                    }
+
+                    // בדיקה מיוחדת לקבצי HEIC
+                    if (message.file_name && message.file_name.toLowerCase().endsWith('.heic')) {
+                        message.is_heic = true;
+                    }
+
+                    // טיפול ספציפי לקבצי MOV
+                    if (message.file_name && message.file_name.toLowerCase().endsWith('.mov')) {
+                        message.mediaType = 'video';
+                    }
+
+                    // הוספת המידע על התמונה הממוזערת
+                    if (msg.thumbnail) {
+                        message.thumbnail = msg.thumbnail;
+                        message.thumbnail_file_size = msg.thumbnail_file_size;
+                    }
+                    
+                    chatData.messages.push(message);
+                }
+            });
+            
+            // מיון ההודעות לפי תאריך
+            chatData.messages.sort((a, b) => {
+                if (a.timestamp && b.timestamp) {
+                    return a.timestamp - b.timestamp;
+                }
+                return 0;
+            });
+        }
 
         // פונקציה לחילוץ מזהה מדיה מאובייקט מדיה
         function getMediaId(mediaObj, type) {
@@ -2704,366 +3006,371 @@ function saveThumbnails(allFiles, zip) {
             
             // הפעל מאזיני אירועים לתמונות
             setupImageEventListeners();
-                onChatLoaded();
+            onChatLoaded();
         }
         
         // יצירת אלמנט מדיה בהתאם לסוג
         function createMediaElement(message) {
-    if (!message.mediaType) return null;
-    
-    const mediaContainer = document.createElement('div');
-    
-    // טעינת ספריות חיצוניות אם לא נטענו כבר
-    loadExternalLibraries();
-    
-    // מצא קובץ מדיה מתאים
-    const mediaFile = findMediaFile(message);
-    
-    // יצירת מזהה ייחודי לאלמנט
-    const elementId = 'media_' + message.id + '_' + Math.random().toString(36).substr(2, 5);
-    mediaContainer.id = elementId;
-    
-    switch (message.mediaType) {
-        case 'photo':
-            mediaContainer.className = 'attachment';
-            if (mediaFile) {
-                // בדיקה אם מדובר בקובץ HEIC שדורש טיפול מיוחד
-                if (message.is_heic || (mediaFile.name && mediaFile.name.toLowerCase().endsWith('.heic'))) {
-                    // יצירת קישור להורדה
-                    const downloadInfo = createDownloadableFile(mediaFile, mediaFile.name || 'image.heic');
+            if (!message.mediaType) return null;
+            
+            const mediaContainer = document.createElement('div');
+            
+            // טעינת ספריות חיצוניות אם לא נטענו כבר
+            loadExternalLibraries();
+            
+            // מצא קובץ מדיה מתאים
+            const mediaFile = findMediaFile(message);
+            
+            // יצירת מזהה ייחודי לאלמנט
+            const elementId = 'media_' + message.id + '_' + Math.random().toString(36).substr(2, 5);
+            mediaContainer.id = elementId;
+            
+            switch (message.mediaType) {
+                case 'photo':
+                    mediaContainer.className = 'attachment';
+                    if (mediaFile) {
+                        // בדיקה אם מדובר בקובץ HEIC שדורש טיפול מיוחד
+                        if (message.is_heic || (mediaFile.name && mediaFile.name.toLowerCase().endsWith('.heic'))) {
+                            // יצירת קישור להורדה
+                            const downloadInfo = createDownloadableFile(mediaFile, mediaFile.name || 'image.heic');
+                            
+                            // לבדוק אם יש תמונה ממוזערת
+                            if (message.thumbnail && mediaStore.has(message.thumbnail)) {
+                                const thumbFile = mediaStore.get(message.thumbnail);
+                                mediaContainer.innerHTML = `
+                                    <div class="heic-container">
+                                        <img src="${thumbFile.data}" alt="תצוגה מקדימה (HEIC)" class="attachment-image">
+                                        <div class="heic-info">קובץ HEIC - לא נתמך ישירות בדפדפן</div>
+                                        <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-link">
+                                            <i class="fas fa-download"></i> הורד את התמונה המקורית
+                                        </a>
+                                    </div>
+                                `;
+                            } else {
+                                mediaContainer.innerHTML = `
+                                    <div class="attachment-file">
+                                        <i class="fas fa-image"></i>
+                                        <span>תמונת HEIC (${mediaFile.name || 'תמונה'})</span>
+                                        <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-link">
+                                            <i class="fas fa-download"></i> הורד את התמונה המקורית
+                                        </a>
+                                    </div>
+                                `;
+                            }
+                        } else {
+                            // תמונה רגילה שהדפדפן יכול להציג
+                            mediaContainer.innerHTML = `
+                                <img src="${mediaFile.data}" alt="תמונה" 
+                                     data-path="${encodeURIComponent(mediaFile.path || '')}" 
+                                     class="attachment-image">
+                            `;
+                        }
+                    } else {
+                        // אם אין קובץ, אבל יש תמונה ממוזערת, נציג את הממוזערת
+                        if (message.thumbnail && mediaStore.has(message.thumbnail)) {
+                            const thumbFile = mediaStore.get(message.thumbnail);
+                            mediaContainer.innerHTML = `
+                                <img src="${thumbFile.data}" alt="תצוגה מקדימה" 
+                                    class="attachment-image">
+                                <div class="preview-note">תצוגה מקדימה בלבד</div>
+                            `;
+                        } else {
+                            mediaContainer.innerHTML = `
+                                <div class="attachment-file">
+                                    <i class="fas fa-image"></i>
+                                    <span>תמונה (${message.file_name || 'הקובץ לא נמצא'})</span>
+                                </div>
+                            `;
+                        }
+                    }
+                    break;
                     
-                    // לבדוק אם יש תמונה ממוזערת
-                    if (message.thumbnail && mediaStore.has(message.thumbnail)) {
-                        const thumbFile = mediaStore.get(message.thumbnail);
+                case 'video':
+                    mediaContainer.className = 'video-container';
+                    if (mediaFile) {
+                        // בדיקה אם זה קובץ MOV
+                        if (message.file_name && message.file_name.toLowerCase().endsWith('.mov')) {
+                            // נשתמש בפונקציה מיוחדת לטיפול בקבצי MOV
+                            setTimeout(() => handleMovVideo(mediaFile, elementId), 0);
+                            mediaContainer.innerHTML = `<div class="loading-media">טוען וידאו...</div>`;
+                        } else {
+                            // וידאו רגיל שהדפדפן יכול להציג
+                            let durationText = '';
+                            if (message.mediaDuration) {
+                                durationText = `<div class="video-duration">${formatDuration(message.mediaDuration)}</div>`;
+                            }
+                            
+                            // בדוק אם יש תמונה ממוזערת לשימוש כ-poster
+                            const thumbnailData = mediaFile.thumbnail_data || 
+                                (message.thumbnail && mediaStore.has(message.thumbnail) ? 
+                                    mediaStore.get(message.thumbnail).data : null);
+                            
+                            mediaContainer.innerHTML = `
+                                <video controls width="100%" ${thumbnailData ? `poster="${thumbnailData}"` : ''}>
+                                    <source src="${mediaFile.data}" type="${mediaFile.type || 'video/mp4'}">
+                                    הדפדפן שלך לא תומך בהצגת וידאו
+                                </video>
+                                ${durationText}
+                            `;
+                        }
+                    } else {
+                        // אם אין קובץ מלא, בדוק אם יש תמונה ממוזערת
+                        if (message.thumbnail && mediaStore.has(message.thumbnail)) {
+                            const thumbFile = mediaStore.get(message.thumbnail);
+                            mediaContainer.innerHTML = `
+                                <div class="video-thumbnail">
+                                    <img src="${thumbFile.data}" alt="תצוגה מקדימה של וידאו" class="attachment-image">
+                                    <div class="video-play-icon"><i class="fas fa-play-circle"></i></div>
+                                    <div class="video-info">לא ניתן להציג את הווידאו: ${message.file_name || message.file || 'קובץ וידאו'}</div>
+                                </div>
+                            `;
+                        } else {
+                            mediaContainer.innerHTML = `
+                                <div class="attachment-file">
+                                    <i class="fas fa-video"></i>
+                                    <span>וידאו (${message.file_name || message.file || 'הקובץ לא נמצא'})</span>
+                                </div>
+                            `;
+                        }
+                    }
+                    break;
+                    
+                case 'sticker':
+                    mediaContainer.className = 'sticker';
+                    if (mediaFile) {
+                        // בדיקה אם מדובר בסטיקר מונפש (TGS)
+                        if (message.is_animated_sticker || (mediaFile.name && mediaFile.name.toLowerCase().endsWith('.tgs'))) {
+                            // נשתמש בפונקציה מיוחדת לטיפול בסטיקרים מונפשים
+                            setTimeout(() => renderTgsSticker(mediaFile, elementId), 0);
+                            mediaContainer.innerHTML = `<div class="loading-media">טוען סטיקר...</div>`;
+                        } else {
+                            // סטיקר רגיל
+                            mediaContainer.innerHTML = `
+                                <img src="${mediaFile.data}" alt="סטיקר" 
+                                     data-path="${encodeURIComponent(mediaFile.path || '')}" 
+                                     class="attachment-image">
+                            `;
+                        }
+                    } else {
+                        // בדוק אם יש תמונה ממוזערת
+                        if (message.thumbnail && mediaStore.has(message.thumbnail)) {
+                            const thumbFile = mediaStore.get(message.thumbnail);
+                            mediaContainer.innerHTML = `
+                                <img src="${thumbFile.data}" alt="סטיקר (תצוגה מקדימה)" class="attachment-image">
+                            `;
+                        } else {
+                            const emoji = message.sticker_emoji || '😊';
+                            mediaContainer.innerHTML = `
+                                <div class="sticker-placeholder">
+                                    <span class="sticker-emoji">${emoji}</span>
+                                    <span>סטיקר</span>
+                                </div>
+                            `;
+                        }
+                    }
+                    break;
+                    
+                case 'voice':
+                    mediaContainer.className = 'voice-message';
+                    if (mediaFile) {
+                        const duration = message.mediaDuration ? formatDuration(message.mediaDuration) : '--:--';
                         mediaContainer.innerHTML = `
-                            <div class="heic-container">
-                                <img src="${thumbFile.data}" alt="תצוגה מקדימה (HEIC)" class="attachment-image">
-                                <div class="heic-info">קובץ HEIC - לא נתמך ישירות בדפדפן</div>
-                                <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-link">
-                                    <i class="fas fa-download"></i> הורד את התמונה המקורית
-                                </a>
+                            <i class="fas fa-microphone"></i>
+                            <audio controls>
+                                <source src="${mediaFile.data}" type="${mediaFile.type || 'audio/ogg'}">
+                                הדפדפן שלך לא תומך בהצגת אודיו
+                            </audio>
+                            <span class="voice-message-duration">${duration}</span>
+                        `;
+                    } else {
+                        mediaContainer.innerHTML = `
+                            <i class="fas fa-microphone"></i>
+                            <span>הודעה קולית (${message.file_name || message.file || 'הקובץ לא נמצא'})</span>
+                        `;
+                    }
+                    break;
+                    
+                case 'document':
+                    mediaContainer.className = 'document-container';
+                    if (mediaFile) {
+                        // נשתמש בפונקציה לטיפול בקבצים כלליים עם אפשרות הורדה
+                        setTimeout(() => handleGenericFile(mediaFile, elementId), 0);
+                        mediaContainer.innerHTML = `<div class="loading-media">טוען קובץ...</div>`;
+                    } else {
+                        let fileName = message.file_name || '';
+                        mediaContainer.innerHTML = `
+                            <div class="document-icon">
+                                <i class="fas fa-file"></i>
+                            </div>
+                            <div class="document-info">
+                                <div class="document-title">${fileName || 'קובץ'}</div>
+                                <div class="document-status">(הקובץ לא נמצא)</div>
+                            </div>
+                        `;
+                    }
+                    break;
+                    
+                case 'video_note':
+                    mediaContainer.className = 'video-note';
+                    if (mediaFile) {
+                        mediaContainer.innerHTML = `
+                            <video controls autoplay loop>
+                                <source src="${mediaFile.data}" type="${mediaFile.type || 'video/mp4'}">
+                                הדפדפן שלך לא תומך בהצגת וידאו
+                            </video>
+                        `;
+                    } else {
+                        // בדוק אם יש תמונה ממוזערת
+                        if (message.thumbnail && mediaStore.has(message.thumbnail)) {
+                            const thumbFile = mediaStore.get(message.thumbnail);
+                            mediaContainer.innerHTML = `
+                                <div class="video-note-thumbnail" style="border-radius: 50%; overflow: hidden;">
+                                    <img src="${thumbFile.data}" alt="וידאו עגול (תצוגה מקדימה)" style="width: 150px; height: 150px; object-fit: cover;">
+                                </div>
+                            `;
+                        } else {
+                            mediaContainer.innerHTML = `
+                                <div class="attachment-file">
+                                    <i class="fas fa-circle"></i>
+                                    <span>הודעת וידאו עגולה (${message.file_name || message.file || 'הקובץ לא נמצא'})</span>
+                                </div>
+                            `;
+                        }
+                    }
+                    break;
+                    
+                case 'contact':
+                    mediaContainer.className = 'contact-preview';
+                    if (message.contact) {
+                        const contact = message.contact;
+                        const fullName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
+                        mediaContainer.innerHTML = `
+                            <div class="contact-info">
+                                <div class="contact-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="contact-details">
+                                    <div class="contact-name">${fullName || 'איש קשר'}</div>
+                                    ${contact.phone_number ? `<div class="contact-phone">${contact.phone_number}</div>` : ''}
+                                </div>
                             </div>
                         `;
                     } else {
                         mediaContainer.innerHTML = `
-                            <div class="attachment-file">
-                                <i class="fas fa-image"></i>
-                                <span>תמונת HEIC (${mediaFile.name || 'תמונה'})</span>
-                                <a href="${downloadInfo.url}" download="${downloadInfo.fileName}" class="download-link">
-                                    <i class="fas fa-download"></i> הורד את התמונה המקורית
-                                </a>
+                            <div class="contact-info">
+                                <i class="fas fa-user"></i>
+                                <span>איש קשר</span>
                             </div>
                         `;
                     }
-                } else {
-                    // תמונה רגילה שהדפדפן יכול להציג
-                    mediaContainer.innerHTML = `
-                        <img src="${mediaFile.data}" alt="תמונה" 
-                             data-path="${encodeURIComponent(mediaFile.path || '')}" 
-                             class="attachment-image">
-                    `;
-                }
-            } else {
-                // אם אין קובץ, אבל יש תמונה ממוזערת, נציג את הממוזערת
-                if (message.thumbnail && mediaStore.has(message.thumbnail)) {
-                    const thumbFile = mediaStore.get(message.thumbnail);
-                    mediaContainer.innerHTML = `
-                        <img src="${thumbFile.data}" alt="תצוגה מקדימה" 
-                            class="attachment-image">
-                        <div class="preview-note">תצוגה מקדימה בלבד</div>
-                    `;
-                } else {
-                    mediaContainer.innerHTML = `
-                        <div class="attachment-file">
-                            <i class="fas fa-image"></i>
-                            <span>תמונה (${message.file_name || 'הקובץ לא נמצא'})</span>
-                        </div>
-                    `;
-                }
-            }
-            break;
-            
-        case 'video':
-            mediaContainer.className = 'video-container';
-            if (mediaFile) {
-                // בדיקה אם זה קובץ MOV
-                if (message.file_name && message.file_name.toLowerCase().endsWith('.mov')) {
-                    // נשתמש בפונקציה מיוחדת לטיפול בקבצי MOV
-                    setTimeout(() => handleMovVideo(mediaFile, elementId), 0);
-                    mediaContainer.innerHTML = `<div class="loading-media">טוען וידאו...</div>`;
-                } else {
-                    // וידאו רגיל שהדפדפן יכול להציג
-                    let durationText = '';
-                    if (message.mediaDuration) {
-                        durationText = `<div class="video-duration">${formatDuration(message.mediaDuration)}</div>`;
+                    break;
+                    
+                case 'location':
+                    mediaContainer.className = 'location-preview';
+                    if (message.location) {
+                        const location = message.location;
+                        const mapUrl = `https://www.openstreetmap.org/?mlat=${location.latitude}&mlon=${location.longitude}&zoom=15`;
+                        
+                        mediaContainer.innerHTML = `
+                            <div class="location-box">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <div class="location-info">
+                                    <div>מיקום:</div>
+                                    <div class="location-coordinates">${location.latitude}, ${location.longitude}</div>
+                                    <a href="${mapUrl}" target="_blank" class="location-link">פתח במפה</a>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        mediaContainer.innerHTML = `
+                            <div class="location-box">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>מיקום</span>
+                            </div>
+                        `;
+                    }
+                    break;
+                    
+                case 'audio':
+                    mediaContainer.className = 'audio-attachment';
+                    if (mediaFile) {
+                        mediaContainer.innerHTML = `
+                            <audio controls>
+                                <source src="${mediaFile.data}" type="${mediaFile.type || 'audio/mp3'}">
+                                הדפדפן שלך לא תומך בהצגת אודיו
+                            </audio>
+                        `;
+                    } else {
+                        mediaContainer.innerHTML = `
+                            <div class="attachment-file">
+                                <i class="fas fa-music"></i>
+                                <span>קובץ אודיו (${message.file_name || message.file || 'הקובץ לא נמצא'})</span>
+                            </div>
+                        `;
+                    }
+                    break;
+                    
+                case 'animation':
+                    mediaContainer.className = 'attachment';
+                    if (mediaFile) {
+                        if (mediaFile.type && mediaFile.type.includes('image/gif')) {
+                            mediaContainer.innerHTML = `
+                                <img src="${mediaFile.data}" alt="אנימציה" 
+                                     data-path="${encodeURIComponent(mediaFile.path || '')}" 
+                                     class="attachment-image">
+                            `;
+                        } else {
+                            mediaContainer.innerHTML = `
+                                <video autoplay loop muted width="100%">
+                                    <source src="${mediaFile.data}" type="${mediaFile.type || 'video/mp4'}">
+                                    הדפדפן שלך לא תומך בהצגת אנימציה
+                                </video>
+                            `;
+                        }
+                    } else {
+                        mediaContainer.innerHTML = `
+                            <div class="attachment-file">
+                                <i class="fas fa-film"></i>
+                                <span>אנימציה (${message.file_name || message.file || 'הקובץ לא נמצא'})</span>
+                            </div>
+                        `;
+                    }
+                    break;
+                    
+                case 'poll':
+                    mediaContainer.className = 'poll-container';
+                    let pollOptions = '';
+                    
+                    if (message.poll && message.poll.options) {
+                        message.poll.options.forEach(option => {
+                            const percentage = message.poll.total_voters > 0 ? 
+                                Math.round((option.voters / message.poll.total_voters) * 100) : 0;
+                            
+                            pollOptions += `
+                                <div class="poll-option">
+                                    <div class="poll-option-text">${option.text}</div>
+                                    <div class="poll-option-votes">${option.voters} (${percentage}%)</div>
+                                    <div class="poll-option-bar">
+                                        <div class="poll-option-progress" style="width: ${percentage}%"></div>
+                                    </div>
+                                </div>
+                            `;
+                        });
                     }
                     
                     mediaContainer.innerHTML = `
-                        <video controls width="100%">
-                            <source src="${mediaFile.data}" type="${mediaFile.type || 'video/mp4'}">
-                            הדפדפן שלך לא תומך בהצגת וידאו
-                        </video>
-                        ${durationText}
+                        <div class="poll-question">${message.poll ? message.poll.question : 'סקר'}</div>
+                        ${pollOptions}
+                        <div class="poll-total">${message.poll ? `סה"כ הצבעות: ${message.poll.total_voters}` : ''}</div>
                     `;
-                }
-            } else {
-                // אם אין קובץ מלא, בדוק אם יש תמונה ממוזערת
-                if (message.thumbnail && mediaStore.has(message.thumbnail)) {
-                    const thumbFile = mediaStore.get(message.thumbnail);
-                    mediaContainer.innerHTML = `
-                        <div class="video-thumbnail">
-                            <img src="${thumbFile.data}" alt="תצוגה מקדימה של וידאו" class="attachment-image">
-                            <div class="video-play-icon"><i class="fas fa-play-circle"></i></div>
-                            <div class="video-info">לא ניתן להציג את הווידאו: ${message.file_name || message.file || 'קובץ וידאו'}</div>
-                        </div>
-                    `;
-                } else {
-                    mediaContainer.innerHTML = `
-                        <div class="attachment-file">
-                            <i class="fas fa-video"></i>
-                            <span>וידאו (${message.file_name || message.file || 'הקובץ לא נמצא'})</span>
-                        </div>
-                    `;
-                }
-            }
-            break;
-            
-        case 'sticker':
-            mediaContainer.className = 'sticker';
-            if (mediaFile) {
-                // בדיקה אם מדובר בסטיקר מונפש (TGS)
-                if (message.is_animated_sticker || (mediaFile.name && mediaFile.name.toLowerCase().endsWith('.tgs'))) {
-                    // נשתמש בפונקציה מיוחדת לטיפול בסטיקרים מונפשים
-                    setTimeout(() => renderTgsSticker(mediaFile, elementId), 0);
-                    mediaContainer.innerHTML = `<div class="loading-media">טוען סטיקר...</div>`;
-                } else {
-                    // סטיקר רגיל
-                    mediaContainer.innerHTML = `
-                        <img src="${mediaFile.data}" alt="סטיקר" 
-                             data-path="${encodeURIComponent(mediaFile.path || '')}" 
-                             class="attachment-image">
-                    `;
-                }
-            } else {
-                // בדוק אם יש תמונה ממוזערת
-                if (message.thumbnail && mediaStore.has(message.thumbnail)) {
-                    const thumbFile = mediaStore.get(message.thumbnail);
-                    mediaContainer.innerHTML = `
-                        <img src="${thumbFile.data}" alt="סטיקר (תצוגה מקדימה)" class="attachment-image">
-                    `;
-                } else {
-                    const emoji = message.sticker_emoji || '😊';
-                    mediaContainer.innerHTML = `
-                        <div class="sticker-placeholder">
-                            <span class="sticker-emoji">${emoji}</span>
-                            <span>סטיקר</span>
-                        </div>
-                    `;
-                }
-            }
-            break;
-            
-        case 'voice':
-            mediaContainer.className = 'voice-message';
-            if (mediaFile) {
-                const duration = message.mediaDuration ? formatDuration(message.mediaDuration) : '--:--';
-                mediaContainer.innerHTML = `
-                    <i class="fas fa-microphone"></i>
-                    <audio controls>
-                        <source src="${mediaFile.data}" type="${mediaFile.type || 'audio/ogg'}">
-                        הדפדפן שלך לא תומך בהצגת אודיו
-                    </audio>
-                    <span class="voice-message-duration">${duration}</span>
-                `;
-            } else {
-                mediaContainer.innerHTML = `
-                    <i class="fas fa-microphone"></i>
-                    <span>הודעה קולית (${message.file_name || message.file || 'הקובץ לא נמצא'})</span>
-                `;
-            }
-            break;
-            
-        case 'document':
-            mediaContainer.className = 'document-container';
-            if (mediaFile) {
-                // נשתמש בפונקציה לטיפול בקבצים כלליים עם אפשרות הורדה
-                setTimeout(() => handleGenericFile(mediaFile, elementId), 0);
-                mediaContainer.innerHTML = `<div class="loading-media">טוען קובץ...</div>`;
-            } else {
-                let fileName = message.file_name || '';
-                mediaContainer.innerHTML = `
-                    <div class="document-icon">
-                        <i class="fas fa-file"></i>
-                    </div>
-                    <div class="document-info">
-                        <div class="document-title">${fileName || 'קובץ'}</div>
-                        <div class="document-status">(הקובץ לא נמצא)</div>
-                    </div>
-                `;
-            }
-            break;
-            
-        case 'video_note':
-            mediaContainer.className = 'video-note';
-            if (mediaFile) {
-                mediaContainer.innerHTML = `
-                    <video controls autoplay loop>
-                        <source src="${mediaFile.data}" type="${mediaFile.type || 'video/mp4'}">
-                        הדפדפן שלך לא תומך בהצגת וידאו
-                    </video>
-                `;
-            } else {
-                // בדוק אם יש תמונה ממוזערת
-                if (message.thumbnail && mediaStore.has(message.thumbnail)) {
-                    const thumbFile = mediaStore.get(message.thumbnail);
-                    mediaContainer.innerHTML = `
-                        <div class="video-note-thumbnail" style="border-radius: 50%; overflow: hidden;">
-                            <img src="${thumbFile.data}" alt="וידאו עגול (תצוגה מקדימה)" style="width: 150px; height: 150px; object-fit: cover;">
-                        </div>
-                    `;
-                } else {
-                    mediaContainer.innerHTML = `
-                        <div class="attachment-file">
-                            <i class="fas fa-circle"></i>
-                            <span>הודעת וידאו עגולה (${message.file_name || message.file || 'הקובץ לא נמצא'})</span>
-                        </div>
-                    `;
-                }
-            }
-            break;
-            
-        case 'contact':
-            mediaContainer.className = 'contact-preview';
-            if (message.contact) {
-                const contact = message.contact;
-                const fullName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
-                mediaContainer.innerHTML = `
-                    <div class="contact-info">
-                        <div class="contact-avatar">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div class="contact-details">
-                            <div class="contact-name">${fullName || 'איש קשר'}</div>
-                            ${contact.phone_number ? `<div class="contact-phone">${contact.phone_number}</div>` : ''}
-                        </div>
-                    </div>
-                `;
-            } else {
-                mediaContainer.innerHTML = `
-                    <div class="contact-info">
-                        <i class="fas fa-user"></i>
-                        <span>איש קשר</span>
-                    </div>
-                `;
-            }
-            break;
-            
-        case 'location':
-            mediaContainer.className = 'location-preview';
-            if (message.location) {
-                const location = message.location;
-                const mapUrl = `https://www.openstreetmap.org/?mlat=${location.latitude}&mlon=${location.longitude}&zoom=15`;
-                
-                mediaContainer.innerHTML = `
-                    <div class="location-box">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <div class="location-info">
-                            <div>מיקום:</div>
-                            <div class="location-coordinates">${location.latitude}, ${location.longitude}</div>
-                            <a href="${mapUrl}" target="_blank" class="location-link">פתח במפה</a>
-                        </div>
-                    </div>
-                `;
-            } else {
-                mediaContainer.innerHTML = `
-                    <div class="location-box">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <span>מיקום</span>
-                    </div>
-                `;
-            }
-            break;
-            
-        case 'audio':
-            mediaContainer.className = 'audio-attachment';
-            if (mediaFile) {
-                mediaContainer.innerHTML = `
-                    <audio controls>
-                        <source src="${mediaFile.data}" type="${mediaFile.type || 'audio/mp3'}">
-                        הדפדפן שלך לא תומך בהצגת אודיו
-                    </audio>
-                `;
-            } else {
-                mediaContainer.innerHTML = `
-                    <div class="attachment-file">
-                        <i class="fas fa-music"></i>
-                        <span>קובץ אודיו (${message.file_name || message.file || 'הקובץ לא נמצא'})</span>
-                    </div>
-                `;
-            }
-            break;
-            
-        case 'animation':
-            mediaContainer.className = 'attachment';
-            if (mediaFile) {
-                if (mediaFile.type && mediaFile.type.includes('image/gif')) {
-                    mediaContainer.innerHTML = `
-                        <img src="${mediaFile.data}" alt="אנימציה" 
-                             data-path="${encodeURIComponent(mediaFile.path || '')}" 
-                             class="attachment-image">
-                    `;
-                } else {
-                    mediaContainer.innerHTML = `
-                        <video autoplay loop muted width="100%">
-                            <source src="${mediaFile.data}" type="${mediaFile.type || 'video/mp4'}">
-                            הדפדפן שלך לא תומך בהצגת אנימציה
-                        </video>
-                    `;
-                }
-            } else {
-                mediaContainer.innerHTML = `
-                    <div class="attachment-file">
-                        <i class="fas fa-film"></i>
-                        <span>אנימציה (${message.file_name || message.file || 'הקובץ לא נמצא'})</span>
-                    </div>
-                `;
-            }
-            break;
-            
-        case 'poll':
-            mediaContainer.className = 'poll-container';
-            let pollOptions = '';
-            
-            if (message.poll && message.poll.options) {
-                message.poll.options.forEach(option => {
-                    const percentage = message.poll.total_voters > 0 ? 
-                        Math.round((option.voters / message.poll.total_voters) * 100) : 0;
+                    break;
                     
-                    pollOptions += `
-                        <div class="poll-option">
-                            <div class="poll-option-text">${option.text}</div>
-                            <div class="poll-option-votes">${option.voters} (${percentage}%)</div>
-                            <div class="poll-option-bar">
-                                <div class="poll-option-progress" style="width: ${percentage}%"></div>
-                            </div>
-                        </div>
-                    `;
-                });
+                default:
+                    return null;
             }
             
-            mediaContainer.innerHTML = `
-                <div class="poll-question">${message.poll ? message.poll.question : 'סקר'}</div>
-                ${pollOptions}
-                <div class="poll-total">${message.poll ? `סה"כ הצבעות: ${message.poll.total_voters}` : ''}</div>
-            `;
-            break;
-            
-        default:
-            return null;
-    }
-    
-    return mediaContainer;
-}
+            return mediaContainer;
+        }
 
         // פורמט גודל קובץ
         function formatFileSize(sizeInBytes) {
@@ -3085,191 +3392,191 @@ function saveThumbnails(allFiles, zip) {
         
         // חיפוש קובץ מדיה במאגר על סמך הודעה
         function findMediaFile(message) {
-    if (!message || !message.mediaType) return null;
-    
-    // 1. First try direct file path matching if available in the message
-    if (message.photo) {
-        const photoPath = message.photo;
-        for (const [key, value] of mediaStore.entries()) {
-            if (value.path === photoPath || key === getFileNameFromPath(photoPath)) {
-                return value;
-            }
-        }
-    }
-    
-    if (message.file) {
-        const filePath = message.file;
-        for (const [key, value] of mediaStore.entries()) {
-            if (value.path === filePath || key === getFileNameFromPath(filePath)) {
-                return value;
-            }
-        }
-    }
-    
-    // 2. Try finding by mediaFileId (if available)
-    if (message.mediaFileId) {
-        for (const [key, value] of mediaStore.entries()) {
-            if (key === message.mediaFileId || key.includes(message.mediaFileId)) {
-                return value;
-            }
-        }
-    }
-    
-    // 3. For specific file types, try pattern matching
-    const fileName = message.file_name || '';
-    if (fileName) {
-        for (const [key, value] of mediaStore.entries()) {
-            if (key === fileName || getFileNameFromPath(value.path) === fileName) {
-                return value;
-            }
-        }
-    }
-    
-    // 4. Try file type directory matching
-    const mediaDirectories = {
-        'photo': ['photos/', 'photo_'],
-        'video': ['video_files/', 'videos/', 'video_'],
-        'voice': ['voice_messages/', 'voice_'],
-        'video_note': ['round_video_messages/', 'round_video_'],
-        'sticker': ['stickers/', 'sticker'],
-        'animation': ['animations/', 'animation_'],
-        'document': ['files/', 'document_']
-    };
-    
-    const filePatterns = mediaDirectories[message.mediaType] || [];
-    for (const pattern of filePatterns) {
-        for (const [key, value] of mediaStore.entries()) {
-            const path = value.path || key;
-            if (path.includes(pattern)) {
-                if (fileName && path.includes(fileName)) {
-                    return value;
-                }
-                
-                // For files with specific formats
-                if (message.mediaType === 'photo' && value.type.includes('image')) {
-                    return value;
-                }
-                if (message.mediaType === 'video' && (value.type.includes('video') || path.endsWith('.MOV'))) {
-                    return value;
-                }
-                if (message.mediaType === 'voice' && (value.type.includes('audio') || path.endsWith('.ogg'))) {
-                    return value;
-                }
-                if (message.mediaType === 'video_note' && path.includes('round_video')) {
-                    return value;
-                }
-            }
-        }
-    }
-    
-    // 5. Check based on file extension for common formats
-    const extensionMap = {
-        'photo': ['.jpg', '.jpeg', '.png', '.heic', '.HEIC'],
-        'video': ['.mp4', '.mov', '.MOV', '.avi'],
-        'voice': ['.ogg', '.mp3', '.wav'],
-        'video_note': ['.mp4', '.mov'],
-        'sticker': ['.webp', '.tgs'],
-        'animation': ['.gif', '.mp4'],
-        'document': ['.pdf', '.doc', '.docx', '.txt']
-    };
-    
-    const extensions = extensionMap[message.mediaType] || [];
-    for (const ext of extensions) {
-        for (const [key, value] of mediaStore.entries()) {
-            const path = value.path || key;
-            if (path.toLowerCase().endsWith(ext.toLowerCase())) {
-                return value;
-            }
-        }
-    }
-    
-    // 6. Last resort - just try to match by timestamp if available
-    if (message.timestamp) {
-        const date = new Date(message.timestamp);
-        const formattedDate = date.toISOString().split('T')[0].replace(/-/g, '');
-        
-        for (const [key, value] of mediaStore.entries()) {
-            const path = value.path || key;
-            if (path.includes(formattedDate)) {
-                // Match media type with file type
-                if ((message.mediaType === 'photo' && value.type.includes('image')) ||
-                    (message.mediaType === 'video' && (value.type.includes('video') || path.endsWith('.MOV'))) ||
-                    (message.mediaType === 'voice' && (value.type.includes('audio') || path.endsWith('.ogg'))) ||
-                    (message.mediaType === 'video_note' && path.includes('round_video'))) {
-                    return value;
-                }
-            }
-        }
-
-            // 1. בדיקה מיוחדת עבור תמונות ממוזערות (thumbnails)
-        if (message.thumbnail) {
-            for (const [key, value] of mediaStore.entries()) {
-                if (key === message.thumbnail || value.path === message.thumbnail) {
-                    return value;
-                }
-            }
-        }
-
-        // 2. בדיקה מיוחדת עבור סטיקרים מסוג TGS
-        if (message.mediaType === 'sticker' && message.file_name && message.file_name.endsWith('.tgs')) {
-            // בדוק אם יש תמונה ממוזערת
-            if (message.thumbnail) {
+            if (!message || !message.mediaType) return null;
+            
+            // 1. First try direct file path matching if available in the message
+            if (message.photo) {
+                const photoPath = message.photo;
                 for (const [key, value] of mediaStore.entries()) {
-                    if (key === message.thumbnail || value.path === message.thumbnail) {
+                    if (value.path === photoPath || key === getFileNameFromPath(photoPath)) {
                         return value;
                     }
                 }
             }
             
-            // אם אין תמונה ממוזערת, חפש את קובץ ה-TGS עצמו
-            for (const [key, value] of mediaStore.entries()) {
-                if (key.endsWith('.tgs') || (value.path && value.path.endsWith('.tgs'))) {
-                    return value;
-                }
-            }
-        }
-
-        // 3. בדיקות ספציפיות לקבצים בעייתיים
-        const problematicFiles = [
-            "IMG_2435.MOV",  // הסרטון הראשון
-            "AnimatedSticker.tgs",  // סטיקר מונפש
-            "IMG_6855.HEIC"  // תמונת HEIC
-        ];
-
-        if (message.file_name && problematicFiles.includes(message.file_name)) {
-            // חיפוש מדויק לפי שם קובץ
-            for (const [key, value] of mediaStore.entries()) {
-                if (key === message.file_name || 
-                    (value.name && value.name === message.file_name) ||
-                    (value.path && value.path.includes(message.file_name))) {
-                    return value;
-                }
-            }
-            
-            // חיפוש לפי נתיב מלא
             if (message.file) {
+                const filePath = message.file;
                 for (const [key, value] of mediaStore.entries()) {
-                    if (key === message.file || value.path === message.file) {
+                    if (value.path === filePath || key === getFileNameFromPath(filePath)) {
                         return value;
                     }
                 }
             }
-        }
+            
+            // 2. Try finding by mediaFileId (if available)
+            if (message.mediaFileId) {
+                for (const [key, value] of mediaStore.entries()) {
+                    if (key === message.mediaFileId || key.includes(message.mediaFileId)) {
+                        return value;
+                    }
+                }
+            }
+            
+            // 3. For specific file types, try pattern matching
+            const fileName = message.file_name || '';
+            if (fileName) {
+                for (const [key, value] of mediaStore.entries()) {
+                    if (key === fileName || getFileNameFromPath(value.path) === fileName) {
+                        return value;
+                    }
+                }
+            }
+            
+            // 4. Try file type directory matching
+            const mediaDirectories = {
+                'photo': ['photos/', 'photo_'],
+                'video': ['video_files/', 'videos/', 'video_'],
+                'voice': ['voice_messages/', 'voice_'],
+                'video_note': ['round_video_messages/', 'round_video_'],
+                'sticker': ['stickers/', 'sticker'],
+                'animation': ['animations/', 'animation_'],
+                'document': ['files/', 'document_']
+            };
+            
+            const filePatterns = mediaDirectories[message.mediaType] || [];
+            for (const pattern of filePatterns) {
+                for (const [key, value] of mediaStore.entries()) {
+                    const path = value.path || key;
+                    if (path.includes(pattern)) {
+                        if (fileName && path.includes(fileName)) {
+                            return value;
+                        }
+                        
+                        // For files with specific formats
+                        if (message.mediaType === 'photo' && value.type.includes('image')) {
+                            return value;
+                        }
+                        if (message.mediaType === 'video' && (value.type.includes('video') || path.endsWith('.MOV'))) {
+                            return value;
+                        }
+                        if (message.mediaType === 'voice' && (value.type.includes('audio') || path.endsWith('.ogg'))) {
+                            return value;
+                        }
+                        if (message.mediaType === 'video_note' && path.includes('round_video')) {
+                            return value;
+                        }
+                    }
+                }
+            }
+            
+            // 5. Check based on file extension for common formats
+            const extensionMap = {
+                'photo': ['.jpg', '.jpeg', '.png', '.heic', '.HEIC'],
+                'video': ['.mp4', '.mov', '.MOV', '.avi'],
+                'voice': ['.ogg', '.mp3', '.wav'],
+                'video_note': ['.mp4', '.mov'],
+                'sticker': ['.webp', '.tgs'],
+                'animation': ['.gif', '.mp4'],
+                'document': ['.pdf', '.doc', '.docx', '.txt']
+            };
+            
+            const extensions = extensionMap[message.mediaType] || [];
+            for (const ext of extensions) {
+                for (const [key, value] of mediaStore.entries()) {
+                    const path = value.path || key;
+                    if (path.toLowerCase().endsWith(ext.toLowerCase())) {
+                        return value;
+                    }
+                }
+            }
+            
+            // 6. Last resort - just try to match by timestamp if available
+            if (message.timestamp) {
+                const date = new Date(message.timestamp);
+                const formattedDate = date.toISOString().split('T')[0].replace(/-/g, '');
+                
+                for (const [key, value] of mediaStore.entries()) {
+                    const path = value.path || key;
+                    if (path.includes(formattedDate)) {
+                        // Match media type with file type
+                        if ((message.mediaType === 'photo' && value.type.includes('image')) ||
+                            (message.mediaType === 'video' && (value.type.includes('video') || path.endsWith('.MOV'))) ||
+                            (message.mediaType === 'voice' && (value.type.includes('audio') || path.endsWith('.ogg'))) ||
+                            (message.mediaType === 'video_note' && path.includes('round_video'))) {
+                            return value;
+                        }
+                    }
+                }
 
-        // 4. כאשר מדובר בקובץ וידאו, נסה לבדוק גם את הסיומות השונות
-        if (message.mediaType === 'video' && message.file_name) {
-            const fileNameLower = message.file_name.toLowerCase();
-            if (fileNameLower.endsWith('.mov')) {
-                for (const [key, value] of mediaStore.entries()) {
-                    const keyLower = key.toLowerCase();
-                    const pathLower = value.path ? value.path.toLowerCase() : '';
-                    
-                    if (keyLower.endsWith('.mov') || pathLower.endsWith('.mov')) {
-                        return value;
+                // 1. בדיקה מיוחדת עבור תמונות ממוזערות (thumbnails)
+                if (message.thumbnail) {
+                    for (const [key, value] of mediaStore.entries()) {
+                        if (key === message.thumbnail || value.path === message.thumbnail) {
+                            return value;
+                        }
                     }
                 }
-            }
-        }
+
+                // 2. בדיקה מיוחדת עבור סטיקרים מסוג TGS
+                if (message.mediaType === 'sticker' && message.file_name && message.file_name.endsWith('.tgs')) {
+                    // בדוק אם יש תמונה ממוזערת
+                    if (message.thumbnail) {
+                        for (const [key, value] of mediaStore.entries()) {
+                            if (key === message.thumbnail || value.path === message.thumbnail) {
+                                return value;
+                            }
+                        }
+                    }
+                    
+                    // אם אין תמונה ממוזערת, חפש את קובץ ה-TGS עצמו
+                    for (const [key, value] of mediaStore.entries()) {
+                        if (key.endsWith('.tgs') || (value.path && value.path.endsWith('.tgs'))) {
+                            return value;
+                        }
+                    }
+                }
+
+                // 3. בדיקות ספציפיות לקבצים בעייתיים
+                const problematicFiles = [
+                    "IMG_2435.MOV",  // הסרטון הראשון
+                    "AnimatedSticker.tgs",  // סטיקר מונפש
+                    "IMG_6855.HEIC"  // תמונת HEIC
+                ];
+
+                if (message.file_name && problematicFiles.includes(message.file_name)) {
+                    // חיפוש מדויק לפי שם קובץ
+                    for (const [key, value] of mediaStore.entries()) {
+                        if (key === message.file_name || 
+                            (value.name && value.name === message.file_name) ||
+                            (value.path && value.path.includes(message.file_name))) {
+                            return value;
+                        }
+                    }
+                    
+                    // חיפוש לפי נתיב מלא
+                    if (message.file) {
+                        for (const [key, value] of mediaStore.entries()) {
+                            if (key === message.file || value.path === message.file) {
+                                return value;
+                            }
+                        }
+                    }
+                }
+
+                // 4. כאשר מדובר בקובץ וידאו, נסה לבדוק גם את הסיומות השונות
+                if (message.mediaType === 'video' && message.file_name) {
+                    const fileNameLower = message.file_name.toLowerCase();
+                    if (fileNameLower.endsWith('.mov')) {
+                        for (const [key, value] of mediaStore.entries()) {
+                            const keyLower = key.toLowerCase();
+                            const pathLower = value.path ? value.path.toLowerCase() : '';
+                            
+                            if (keyLower.endsWith('.mov') || pathLower.endsWith('.mov')) {
+                                return value;
+                            }
+                        }
+                    }
+                }
             }
             
             return null;
@@ -3644,46 +3951,46 @@ function saveThumbnails(allFiles, zip) {
         }
 
         // פונקציה לאתחול הממשק ולטעינת ספריות
-    function initializeChatViewer() {
-        // טען ספריות חיצוניות אם נדרש
-        loadExternalLibraries();
-        
-        // הוסף אירוע ניקוי קישורים לפני סגירת החלון
-        window.addEventListener('beforeunload', function() {
-            cleanupDownloadLinks();
-        });
-        
-        // רענן את מראה השיחה
-        if (chatData && chatData.messages && chatData.messages.length > 0) {
-            updateChatView();
-        }
-        
-        console.log('מציג שיחות טלגרם אותחל בהצלחה');
-    }
-
-    // הפעל את האתחול כשהדף נטען
-    document.addEventListener('DOMContentLoaded', function() {
-        initializeChatViewer();
-    });
-
-    // הוסף פונקציית מחזור חיים להרצה אחרי טעינת שיחה
-    function onChatLoaded() {
-        // נקה קישורי הורדה קודמים
-        cleanupDownloadLinks();
-        
-        // בדוק אם יש הודעות שדורשות טיפול מיוחד
-        if (chatData && chatData.messages) {
-            const problematicMessages = chatData.messages.filter(msg => 
-                (msg.mediaType === 'sticker' && msg.is_animated_sticker) ||
-                (msg.mediaType === 'video' && msg.file_name && msg.file_name.toLowerCase().endsWith('.mov')) ||
-                (msg.mediaType === 'document')
-            );
+        function initializeChatViewer() {
+            // טען ספריות חיצוניות אם נדרש
+            loadExternalLibraries();
             
-            if (problematicMessages.length > 0) {
-                console.log(`נמצאו ${problematicMessages.length} הודעות שדורשות טיפול מיוחד`);
+            // הוסף אירוע ניקוי קישורים לפני סגירת החלון
+            window.addEventListener('beforeunload', function() {
+                cleanupDownloadLinks();
+            });
+            
+            // רענן את מראה השיחה
+            if (chatData && chatData.messages && chatData.messages.length > 0) {
+                updateChatView();
+            }
+            
+            console.log('מציג שיחות טלגרם אותחל בהצלחה');
+        }
+
+        // הפעל את האתחול כשהדף נטען
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeChatViewer();
+        });
+
+        // הוסף פונקציית מחזור חיים להרצה אחרי טעינת שיחה
+        function onChatLoaded() {
+            // נקה קישורי הורדה קודמים
+            cleanupDownloadLinks();
+            
+            // בדוק אם יש הודעות שדורשות טיפול מיוחד
+            if (chatData && chatData.messages) {
+                const problematicMessages = chatData.messages.filter(msg => 
+                    (msg.mediaType === 'sticker' && msg.is_animated_sticker) ||
+                    (msg.mediaType === 'video' && msg.file_name && msg.file_name.toLowerCase().endsWith('.mov')) ||
+                    (msg.mediaType === 'document')
+                );
+                
+                if (problematicMessages.length > 0) {
+                    console.log(`נמצאו ${problematicMessages.length} הודעות שדורשות טיפול מיוחד`);
+                }
             }
         }
-    }
 </script>
 </body>
 </html>
